@@ -51,7 +51,9 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
   `help.html` is the guide behind *Help*; keep it in step with the app.
 - `build/icon.svg` - the app icon; `npm run icon` renders it to PNG.
 
-Installers have to be built on the system they are for (or by a cloud build).
+Installers have to be built on the system they are for. GitHub does that for all three:
+`.github/workflows/build.yml` builds them when run from the Actions tab, and pushing a tag
+like `v0.2.0` also makes a Release with the installers attached.
 They are not code-signed yet, so Windows and macOS show a warning the first time.
 
 ## License

@@ -1,0 +1,57 @@
+# Builds the installers for Linux, Windows and macOS on GitHub's own machines.
+#
+#   By hand:      Actions tab > Build installers > Run workflow. The installers are attached
+#                 to the finished run as downloads ("Artifacts"), kept for 90 days.
+#   For release:  push a tag like v0.2.0. The same build runs, then a GitHub Release is
+#                 made with every installer attached.
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false # one system failing shouldn't throw away the others
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: linux, args: '' }
+          - { os: windows-latest, name: windows, args: '' }
+          - { os: macos-latest, name: mac, args: '--universal' } # one .dmg for both Apple Silicon and Intel Macs
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # "never": electron-builder would otherwise try to publish by itself when it sees a tag
+      - run: npx electron-builder ${{ matrix.args }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BenchClock-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - run: gh release create "$GITHUB_REF_NAME" installers/* --repo "$GITHUB_REPOSITORY" --title "BenchClock $GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
