@@ -31,6 +31,12 @@ jobs:
       - run: npm test
       # "never": electron-builder would otherwise try to publish by itself when it sees a tag
       - run: npx electron-builder ${{ matrix.args }} --publish never
+      # There is no Apple certificate, so the app is signed "ad-hoc" (package.json, mac.identity "-").
+      # Apple Silicon refuses to start an app with no valid signature at all, so make sure it has one.
+      - if: runner.os == 'macOS'
+        run: |
+          codesign --verify --deep --strict --verbose=2 dist/mac-universal/BenchClock.app
+          codesign --display --verbose=2 dist/mac-universal/BenchClock.app 2>&1 | grep -E "Signature|Format|flags"
       - uses: actions/upload-artifact@v4
         with:
           name: BenchClock-${{ matrix.name }}

@@ -54,7 +54,8 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
 Installers have to be built on the system they are for. GitHub does that for all three:
 `.github/workflows/build.yml` builds them when run from the Actions tab, and pushing a tag
 like `v0.2.0` also makes a Release with the installers attached.
-They are not code-signed yet, so Windows and macOS show a warning the first time.
+They are not signed with a paid certificate yet, so Windows and macOS show a warning the first
+time. (The Mac app carries a free "ad-hoc" signature, which Apple Silicon needs to start it at all.)
 
 ## License
 

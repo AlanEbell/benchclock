@@ -45,7 +45,9 @@
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "identity": "-",
+      "hardenedRuntime": false
     },
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
   },
