@@ -505,7 +505,7 @@ $('reportCsv').onclick = () => saveReport('exportCsv');
 
 function openAbout() {
   $('aboutVersion').textContent = `Version ${state.app.version}`;
-  $('aboutDetail').textContent = `Built on Electron ${state.app.electron}. Your time card is kept in ${state.dataDir}`;
+  $('aboutDetail').textContent = `Free software under the MIT license. Built on Electron ${state.app.electron}. Your time card is kept in ${state.dataDir}`;
   $('aboutDlg').showModal();
   $('aboutClose').focus();
 }

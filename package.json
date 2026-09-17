@@ -4,7 +4,7 @@
   "version": "0.2.0",
   "description": "BenchClock, a time card for jewelry artists: clock in and out, and split each session across the pieces on the bench.",
   "author": "AlanEbell <13323211+AlanEbell@users.noreply.github.com>",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "main": "src/main/main.js",
   "scripts": {
@@ -19,7 +19,8 @@
     "appId": "com.alanebell.benchclock",
     "files": [
       "src/**/*",
-      "package.json"
+      "package.json",
+      "LICENSE"
     ],
     "linux": {
       "target": [

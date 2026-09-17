@@ -53,3 +53,7 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
 
 Installers have to be built on the system they are for (or by a cloud build).
 They are not code-signed yet, so Windows and macOS show a warning the first time.
+
+## License
+
+[MIT](LICENSE). Use it, change it, share it.
