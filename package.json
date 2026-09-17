@@ -1,0 +1,51 @@
+{
+  "name": "benchclock",
+  "productName": "BenchClock",
+  "version": "0.1.0",
+  "description": "BenchClock, a time card for jewelry artists: clock in and out, and split each session across the pieces on the bench.",
+  "author": "AlanEbell <13323211+AlanEbell@users.noreply.github.com>",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "smoke": "electron scripts/smoke.js",
+    "screenshots": "electron scripts/screenshots.js",
+    "icon": "electron scripts/make-icon.js",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.alanebell.benchclock",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png",
+      "synopsis": "Time card for jewelry artists"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+  },
+  "devDependencies": {
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3"
+  },
+  "homepage": "https://github.com/AlanEbell/jewelry-timecard"
+}

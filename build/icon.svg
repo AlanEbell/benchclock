@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1f6b62"/>
+  <!-- a ring whose band is the clock face -->
+  <path d="M206 96l50 52 50-52-24-40h-52z" fill="#f5d48a" stroke="#fffdf8" stroke-width="16" stroke-linejoin="round"/>
+  <circle cx="256" cy="296" r="148" fill="none" stroke="#fffdf8" stroke-width="30"/>
+  <path d="M256 206v92l62 40" fill="none" stroke="#fffdf8" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

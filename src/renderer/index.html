@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' bench-photo:">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BenchClock</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>BenchClock</h1>
+  </header>
+
+  <section class="clock" id="clock">
+    <div class="info">
+      <div class="state" id="clockState">Clocked out</div>
+      <div class="timer" id="timer">0:00:00</div>
+      <div class="since" id="since"></div>
+    </div>
+    <button class="quiet" id="cancelBtn" hidden title="Throw away this session without logging any time">Discard session</button>
+    <button class="primary big" id="clockBtn">Clock in</button>
+  </section>
+
+  <div class="section-head">
+    <h2>On the bench <small id="benchCount"></small></h2>
+    <span class="spacer"></span>
+    <span id="selCount" class="muted"></span>
+    <button id="finishBtn" hidden>Mark finished</button>
+    <button class="primary" id="addBtn"><span class="glyph" id="addGlyph"></span>Add a piece</button>
+  </div>
+  <div class="list" id="bench"></div>
+
+  <div class="list overhead" id="overhead"></div>
+
+  <div class="section-head">
+    <h2>Finished <small id="finCount"></small></h2>
+    <button id="toggleFin" class="quiet">Show</button>
+    <span class="spacer"></span>
+    <button id="expFin">Export finished (CSV)</button>
+    <button id="expAll">Export everything (CSV)</button>
+  </div>
+  <div class="list" id="finished" hidden></div>
+
+  <footer>Everything is saved as plain files in <button class="link" id="dataDir"></button></footer>
+</main>
+
+<dialog id="pieceDlg">
+  <form method="dialog" id="pieceForm" autocomplete="off">
+    <h2 id="pieceTitle">Add a piece</h2>
+    <label for="pName">Name of the piece or design</label>
+    <input type="text" id="pName" required placeholder="e.g. Moonstone ring">
+
+    <div class="field-label">What is it?</div>
+    <div class="tiles" id="typeTiles" role="radiogroup" aria-label="What is it?"></div>
+
+    <div class="field-label">Photo <span class="muted">- optional; shown instead of the icon. Drop a picture here to add it.</span></div>
+    <div class="tiles photos" id="photoTiles"></div>
+
+    <div id="qtyBlock">
+      <div class="field-label">How many?</div>
+      <div class="qty-row">
+        <div class="stepper">
+          <button type="button" id="qtyDown" aria-label="One fewer">&minus;</button>
+          <input type="text" inputmode="numeric" id="pQty" value="1" aria-label="How many">
+          <button type="button" id="qtyUp" aria-label="One more">+</button>
+        </div>
+        <div class="segmented" id="modeRow" hidden>
+          <label><input type="radio" name="mode" value="batch" checked><span>One batch, made together</span></label>
+          <label><input type="radio" name="mode" value="separate"><span>Separate pieces, timed on their own</span></label>
+        </div>
+      </div>
+    </div>
+
+    <details id="moreDetails">
+      <summary>SKU and notes</summary>
+      <label for="pSku">SKU</label>
+      <input type="text" id="pSku">
+      <label for="pNotes">Notes</label>
+      <textarea id="pNotes" rows="2"></textarea>
+    </details>
+
+    <div class="actions">
+      <button type="button" class="danger" id="pieceDelete" hidden>Delete piece</button>
+      <span class="spacer"></span>
+      <button type="button" id="pieceCancel">Cancel</button>
+      <button type="submit" class="primary" id="pieceSave">Add</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="outDlg">
+  <h2>Clock out</h2>
+  <p class="hint" id="outSummary"></p>
+  <label for="outWhen">Clock-out time - change this if you forgot to clock out</label>
+  <input type="datetime-local" id="outWhen">
+  <p class="hint gap" id="outHint"></p>
+  <div id="allocRows"></div>
+  <div class="alloc overhead-row">
+    <span class="tile small" id="outOverheadTile"></span>
+    <div><b>TimeOverhead</b><div class="muted">everything besides making - gets whatever is left</div></div>
+    <div class="pct-fixed" id="overheadPct"></div>
+    <div class="mins" id="overheadMins"></div>
+  </div>
+  <div class="total" id="allocTotal"></div>
+  <div class="actions">
+    <button type="button" id="evenBtn" title="Split 100% evenly across every piece listed">Split evenly</button>
+    <button type="button" id="fillBtn" title="Give what is left to the rows that are still blank">Spread the rest</button>
+    <span class="spacer"></span>
+    <button type="button" id="outCancel">Keep working</button>
+    <button type="button" class="primary" id="outConfirm">Clock out</button>
+  </div>
+</dialog>
+
+<dialog id="partDlg">
+  <form method="dialog" id="partForm">
+    <h2>Finish some of a batch</h2>
+    <p class="hint" id="partHint"></p>
+    <div class="field-label">How many are finished?</div>
+    <div class="stepper">
+      <button type="button" id="partDown" aria-label="One fewer">&minus;</button>
+      <input type="text" inputmode="numeric" id="partCount" value="1" aria-label="How many are finished">
+      <button type="button" id="partUp" aria-label="One more">+</button>
+    </div>
+    <div class="actions">
+      <span class="spacer"></span>
+      <button type="button" id="partCancel">Cancel</button>
+      <button type="submit" class="primary">Mark finished</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logDlg">
+  <h2 id="logTitle"></h2>
+  <div id="logBody"></div>
+  <div class="actions"><span class="spacer"></span><button type="button" id="logClose">Close</button></div>
+</dialog>
+
+<dialog id="askDlg">
+  <h2 id="askTitle"></h2>
+  <p id="askText"></p>
+  <div class="actions">
+    <span class="spacer"></span>
+    <button type="button" id="askNo">Cancel</button>
+    <button type="button" class="primary" id="askYes"></button>
+  </div>
+</dialog>
+
+<div id="toast" hidden></div>
+<script src="icons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

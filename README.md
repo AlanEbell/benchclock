@@ -1,68 +1,43 @@
-# Jewelry Time Card
+# BenchClock
 
-A time card for jewelry artists. Clock in, work, clock out, and say what share of
-the session went to each piece. A desktop app for Linux, Windows and macOS.
+A time card for jewelry artists. Clock in, work, clock out, and say what share of the
+session went to each piece on the bench. A desktop app for Linux, Windows and macOS.
 
-## Running it
+## Using it
 
-Needs Python 3.9 or newer with Tk — nothing else to install.
+- **Clock in / Clock out** - one big button. Closing the window does not clock you out.
+- **Add a piece** - a name, a tap on what it is (earrings, ring, pendant...), done.
+  Making several? Choose *one batch made together* (`Hoop earrings x6`, time shared
+  evenly) or *separate pieces* (`Moonstone ring (1 of 3)`..., each timed on its own).
+- **Photos** - add a photo to a piece and it is shown instead of the icon. Every photo
+  you add stays in your library as a choice for later pieces. JPEG and PNG; drop a
+  picture onto the dialog or use *Add...*.
+- **Clocking out** - type a percentage next to the pieces you worked on. Same-named
+  pieces get an *All 3 x ...* row that splits one number between them. *Split evenly*
+  and *Spread the rest* do the arithmetic. You can correct the clock-out time if you
+  forgot to clock out.
+- **TimeOverhead** - always there. Whatever part of a session you don't give to a
+  piece goes to it: ordering, photographing, cleaning up, anything besides making.
+- **Mark finished** - tick pieces at any time. *Finish some* finishes part of a batch.
+  Finished pieces can be reopened.
+- **Export** - CSV of finished pieces, or of everything including TimeOverhead.
 
-| System  | How to start                                | Tk                                   |
-|---------|---------------------------------------------|--------------------------------------|
-| Windows | double-click `Start Time Card.bat`          | included with Python from python.org |
-| macOS   | double-click `Start Time Card.command`      | included with Python from python.org |
-| Linux   | `./start-timecard.sh` (or `python3 run.py`) | `sudo apt install python3-tk`        |
+All data is plain files on your own computer; see [DATA_FORMAT.md](DATA_FORMAT.md).
 
-Closing the window does not clock you out — the session is kept on disk, so it
-survives a restart.
+## Development
 
-To make a standalone app that doesn't need Python: `pip install pyinstaller`,
-then `python build_app.py` on each operating system you want an app for.
+Needs [Node.js](https://nodejs.org) 22 or newer.
 
-## How it works
+    npm install
+    npm start                 # run the app
+    npm test                  # time-keeping logic (no window needed)
+    npm run smoke -- --data-dir=/tmp/benchclock-smoke    # drives the real app end to end
+    npm run dist              # build installers for this operating system into dist/
 
-- **Add a piece** with a name and how many. For more than one, choose:
-  - *One batch made together* — a single entry (`Hoop earrings ×6`) whose time is
-    shared evenly, giving a per-piece time.
-  - *Separate pieces* — individual entries (`Moonstone ring (1 of 3)` …), each
-    timed on its own.
-- **Clock out** asks what percent of the session went to each piece. Pieces with
-  the same name get an "All 3 × …" row that splits one number evenly across them.
-  *Split evenly* and *Spread the rest* fill in the arithmetic. The clock-out time
-  can be changed if you forgot to clock out.
-- **TimeOverhead** is always there. The percentages don't have to reach 100%:
-  whatever isn't given to a piece goes to TimeOverhead, the catch-all for
-  everything besides making (ordering, photos, cleaning up). It can't be finished,
-  renamed or deleted, and it has its own time log like any piece.
-- **Mark finished** at any time by selecting pieces, clocked in or not. A piece
-  finished mid-session still appears at clock-out so its last stretch is counted.
-  *Finish some of a batch* marks part of a batch finished; those pieces take their
-  even share of the time logged so far. Finished pieces can be reopened.
+- `src/core/timecard.js` - all time keeping and file handling. No interface.
+- `src/main/` - the Electron main process: window, file dialogs, photo import.
+- `src/renderer/` - the window itself: HTML, CSS, and the icon set in `icons.js`.
+- `build/icon.svg` - the app icon; `npm run icon` renders it to PNG.
 
-## Where the data lives
-
-| System  | Folder                                              |
-|---------|-----------------------------------------------------|
-| Linux   | `~/.local/share/JewelryTimeCard`                    |
-| macOS   | `~/Library/Application Support/JewelryTimeCard`     |
-| Windows | `%APPDATA%\JewelryTimeCard`                         |
-
-Use `--data-dir` (or the `JTC_DATA_DIR` environment variable) to put it elsewhere,
-such as a synced folder.
-
-- `items/<id>.json` — one file per piece or batch: name, SKU, quantity, status,
-  `total_seconds`, `seconds_per_piece`, and a `time_entries` list with one record
-  per work session (clock in/out, percent, seconds).
-- `items/time-overhead.json` — the same, for TimeOverhead.
-- `sessions/*.json` — one file per clock-in/clock-out with how it was split.
-
-CSV export is on the Finished tab (finished pieces, or everything including
-TimeOverhead), or from the command line: `python3 run.py --export pieces.csv`.
-The item JSON files are the intended hand-off point for Superfy; that export is
-not built yet.
-
-## Code
-
-- `jewelry_timecard/core.py` — all the time keeping and the JSON files. No interface.
-- `jewelry_timecard/tk_app.py` — the window.
-- `tests/` — `python3 -m unittest discover -s tests` (the window tests need a display).
+Installers have to be built on the system they are for (or by a cloud build).
+They are not code-signed yet, so Windows and macOS show a warning the first time.
