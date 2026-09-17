@@ -205,3 +205,32 @@ test('timestamps carry the local UTC offset', () => {
   assert.match(card.currentSession().clock_in, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/);
   assert.equal(new Date(card.currentSession().clock_in).getTime(), start.getTime());
 });
+
+test('narrowing to a period keeps whole-life totals and leaves all time alone', () => {
+  const { checkPeriod, narrowItems } = require('../src/core/timecard.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'benchclock-'));
+  try {
+    const card = new TimeCard(dir);
+    const [hoops] = card.addItem({ name: 'Hoops', quantity: 4 });
+    card.addItem({ name: 'Untouched' });
+    card.clockIn(new Date(2026, 8, 1, 23, 0));
+    card.clockOut({ [hoops.id]: 100 }, new Date(2026, 8, 2, 1, 0)); // past midnight: counts on the 1st
+    card.clockIn(new Date(2026, 8, 5, 9, 0));
+    card.clockOut({ [hoops.id]: 100 }, new Date(2026, 8, 5, 10, 0));
+
+    assert.equal(narrowItems(card.listItems(), checkPeriod({})).length, 2, 'all time drops nothing');
+    const [first, ...rest] = narrowItems(card.listItems(), checkPeriod({ from: '2026-09-01', to: '2026-09-01' }));
+    assert.equal(rest.length, 0);
+    assert.deepEqual([first.total_seconds, first.seconds_per_piece, first.all_seconds], [7200, 1800, 10800]);
+    assert.equal(narrowItems(card.listItems(), checkPeriod({ from: '2026-09-02', to: '2026-09-04' })).length, 0);
+    assert.equal(narrowItems(card.listItems(), checkPeriod({ from: '2026-09-02', to: '2026-09-04' }), true).length, 2, 'hand-picked pieces stay');
+
+    const out = path.join(dir, 'week.csv');
+    card.exportCsv(out, narrowItems(card.listItems(), checkPeriod({ from: '2026-09-05' })));
+    const [header, row] = fs.readFileSync(out, 'utf8').trim().split('\r\n').map((line) => line.split(','));
+    assert.equal(row[header.indexOf('total_hours')], '1');
+    assert.equal(row[header.indexOf('work_sessions')], '1');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

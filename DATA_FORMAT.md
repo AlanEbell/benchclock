@@ -70,5 +70,8 @@ One row per item, `\r\n` line endings, RFC 4180 quoting. Columns:
 `item_id, name, sku, type, photo, batch_id, quantity, status, created_at, started_at, finished_at,
 total_hours, total_minutes, minutes_per_piece, work_sessions, notes`
 
-"Export everything" ends with the TimeOverhead row (`status` = `overhead`).
+An export of everything ends with the TimeOverhead row (`status` = `overhead`).
+An export made for a range of days counts only the time clocked in on those days in `total_hours`,
+`total_minutes`, `minutes_per_piece` and `work_sessions`, and leaves out pieces that have none and
+were not finished in the range (unless they were ticked for the export). The dates are in the file's name.
 Read columns by header name, not position: new columns may be added.

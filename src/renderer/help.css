@@ -1,0 +1,37 @@
+/* The guide (help.html). Colours and type come from styles.css. */
+body.help { -webkit-user-select: text; user-select: text; cursor: auto; }
+.help main { max-width: 740px; padding-top: 28px; }
+.help header { display: flex; align-items: center; gap: 16px; }
+.help header img { border-radius: 16px; flex: none; }
+.help h1 { font-size: 26px; }
+.help .lead { color: var(--muted); margin: 2px 0 0; }
+.help nav {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 14px 20px; margin: 22px 0 8px; columns: 2; column-gap: 28px; font-size: 14px;
+}
+.help nav a { display: block; padding: 3px 0; break-inside: avoid; }
+.help a { color: var(--accent); text-decoration: none; }
+.help a:hover { text-decoration: underline; }
+.help a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.help section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px; scroll-margin-top: 8px; }
+.help h2 { font-size: 21px; margin-bottom: 8px; }
+.help h3 { font-size: 15px; font-weight: 600; margin: 20px 0 4px; }
+.help p, .help ul, .help ol { margin: 8px 0; }
+.help ul, .help ol { padding-left: 22px; }
+.help li { margin: 5px 0; }
+.help b.ui { font-weight: 600; white-space: nowrap; }
+.help .note {
+  background: var(--accent-soft); border-radius: 12px; padding: 10px 16px; margin: 14px 0; font-size: 14px;
+}
+.help .example { background: var(--soft); border-radius: 12px; padding: 10px 16px; margin: 14px 0; font-size: 14px; }
+.help kbd {
+  font: 12.5px ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace; background: var(--card);
+  border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; white-space: nowrap;
+}
+.help code { font: 13px ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace; background: var(--soft); border-radius: 5px; padding: 1px 5px; word-break: break-all; }
+.help table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0; }
+.help th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.help th, .help td { padding: 7px 14px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.help .top-link { font-size: 13px; margin-top: 14px; display: inline-block; }
+.help footer { margin-top: 40px; }
+@media (max-width: 560px) { .help nav { columns: 1; } }

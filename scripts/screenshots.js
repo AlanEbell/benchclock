@@ -3,7 +3,7 @@
 // opens the real app on it and saves screenshots.   npx electron scripts/screenshots.js --data-dir=/tmp/x --out=/tmp/shots
 const fs = require('node:fs');
 const path = require('node:path');
-const { app, nativeImage } = require('electron');
+const { app, nativeImage, BrowserWindow } = require('electron');
 const { TimeCard } = require('../src/core/timecard.js');
 
 const arg = (name) => (process.argv.find((a) => a.startsWith(`--${name}=`)) || '').split('=').slice(1).join('=');
@@ -28,7 +28,10 @@ if (!card.listItems().length) {
 }
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+let started = false;
 app.on('browser-window-created', (event, win) => {
+  if (started) return; // only the app's own window, not the guide or the report printer
+  started = true;
   win.webContents.once('did-finish-load', async () => {
     const run = (js) => win.webContents.executeJavaScript(js, true);
     const shot = async (name) => { await wait(500); fs.writeFileSync(path.join(out, `${name}.png`), (await win.webContents.capturePage()).toPNG()); };
@@ -46,6 +49,20 @@ app.on('browser-window-created', (event, win) => {
     await shot('clockout-open');
     await run("$('outDlg').close(); showFinished = true; render(); openLog(state.items[0])");
     await shot('log');
+    await run("$('logDlg').close(); openReport()");
+    await run("document.querySelector('[data-preset=this-month]').click()");
+    await shot('report');
+    await run("$('reportDlg').close(); openAbout()");
+    await shot('about');
+    await run("$('aboutDlg').close(); api('openHelp')");
+    await wait(1200);
+    const guide = BrowserWindow.getAllWindows().find((w) => w !== win);
+    fs.writeFileSync(path.join(out, 'help.png'), (await guide.webContents.capturePage()).toPNG());
+    const { writeReportPdf } = require('../src/main/main.js');
+    const day = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    await writeReportPdf(path.join(out, 'report-all.pdf'));
+    await writeReportPdf(path.join(out, 'report-month.pdf'), { from: day(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), to: day(new Date()) });
+    await writeReportPdf(path.join(out, 'report-finished.pdf'), { scope: 'finished' });
     app.quit();
   });
 });

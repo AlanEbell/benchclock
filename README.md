@@ -22,10 +22,15 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
 - **Finishing** - press *Finish* on a line (*Finish all* / *Finish some* on a group), or tick
   several and press *Mark finished*.
   Finished pieces can be reopened.
-- **Time report (PDF)** - every piece, on the bench and finished, with the time spent on it,
-  batches totalled with each piece listed beneath, plus how much of your clocked time
-  went to making and how much to TimeOverhead. Opens as soon as it is saved.
-- **Export** - CSV of finished pieces, or of everything including TimeOverhead.
+- **Report or export** - one box, three choices. *Which pieces*: everything, the ones you
+  ticked, those on the bench, or those finished. *Which days*: this or last week, this or
+  last month, this year, all time, or any From and To dates from a date picker; only time
+  clocked on those days is counted. Then *Save as PDF* for a report to read and print
+  (batches totalled with each piece listed beneath, the split between making and
+  TimeOverhead, and for a range of days each piece's time to date alongside), or
+  *Save as CSV* for a spreadsheet.
+- **Menu bar** - *Help* has a detailed guide (F1) and *About BenchClock*, which shows the
+  version that is running.
 
 All data is plain files on your own computer; see [DATA_FORMAT.md](DATA_FORMAT.md).
 
@@ -40,9 +45,10 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
     npm run dist              # build installers for this operating system into dist/
 
 - `src/core/timecard.js` - all time keeping and file handling. No interface.
-- `src/main/` - the Electron main process: window, file dialogs, photo import, and the
-  PDF report (`report.js` lays it out).
+- `src/main/` - the Electron main process: window, menu bar, file dialogs, photo import, and
+  the PDF report (`report.js` lays it out).
 - `src/renderer/` - the window itself: HTML, CSS, and the icon set in `icons.js`.
+  `help.html` is the guide behind *Help*; keep it in step with the app.
 - `build/icon.svg` - the app icon; `npm run icon` renders it to PNG.
 
 Installers have to be built on the system they are for (or by a cloud build).

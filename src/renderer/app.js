@@ -112,8 +112,7 @@ function rowHtml(item, child = false) {
   const each = item.quantity > 1 ? `<small>${fmtDur(item.seconds_per_piece)} each</small>` : '';
   const meta = [item.sku && `SKU ${esc(item.sku)}`, finished && `finished ${fmtWhen(item.finished_at)}`, esc(item.notes)]
     .filter(Boolean).join(' &middot; ');
-  const check = finished ? '' :
-    `<input type="checkbox" data-act="select" aria-label="Select ${esc(item.label)}" ${selected.has(item.id) ? 'checked' : ''}>`;
+  const check = `<input type="checkbox" data-act="select" aria-label="Select ${esc(item.label)}" ${selected.has(item.id) ? 'checked' : ''}>`;
   const actions = finished ? '<button class="quiet" data-act="reopen">Reopen</button>' :
     `<button class="quiet go" data-act="finish">Finish</button>${
       item.quantity > 1 ? '<button class="quiet" data-act="part">Finish some</button>' : ''}`;
@@ -133,8 +132,8 @@ function groupHtml(group, list) {
   const members = group.items;
   const total = members.reduce((n, i) => n + i.total_seconds, 0);
   const picked = members.filter((i) => selected.has(i.id)).length;
-  const check = list === 'bench' ? `<input type="checkbox" data-act="select-group" aria-label="Select all ${esc(group.name)}"
-      ${picked === members.length ? 'checked' : ''} ${picked && picked < members.length ? 'data-some="1"' : ''}>` : '';
+  const check = `<input type="checkbox" data-act="select-group" aria-label="Select all ${esc(group.name)}"
+      ${picked === members.length ? 'checked' : ''} ${picked && picked < members.length ? 'data-some="1"' : ''}>`;
   const started = members.filter((i) => i.status === 'in_progress').length;
   const meta = [members[0].sku && `SKU ${esc(members[0].sku)}`, `added ${fmtDay(members[0].created_at)}`,
     list === 'bench' && started && started < members.length && `${started} of ${members.length} started`,
@@ -162,7 +161,8 @@ function render() {
 
   const open = state.items.filter((i) => i.status !== 'finished');
   const done = state.items.filter((i) => i.status === 'finished');
-  for (const id of [...selected]) if (!open.some((i) => i.id === id)) selected.delete(id);
+  for (const id of [...selected]) if (!state.items.some((i) => i.id === id)) selected.delete(id);
+  const tickedOpen = open.filter((i) => selected.has(i.id)); // ticks mark pieces to finish, and pieces to report on
 
   // A group counts as in progress as soon as any one of its pieces is.
   const benchGroups = groupItems(open);
@@ -171,12 +171,13 @@ function render() {
   $('bench').innerHTML = open.length ? sections.map(([title, groups]) => (
     groups.length ? `<div class="group-title">${title}</div>${groups.map((g) => groupHtml(g, 'bench')).join('')}` : '')).join('') :
     '<div class="empty">Nothing on the bench yet. Add a piece to get started.</div>';
-  for (const box of document.querySelectorAll('#bench input[data-some]')) box.indeterminate = true;
+
   const openCount = open.reduce((n, i) => n + i.quantity, 0);
   $('benchCount').textContent = open.length ? pieces(openCount) : '';
-  $('finishBtn').hidden = !selected.size;
+  $('finishBtn').hidden = !tickedOpen.length;
+  $('clearSel').hidden = !selected.size;
   $('benchTip').hidden = !open.length;
-  $('selCount').textContent = selected.size ? `${selected.size} selected` : '';
+  $('selCount').textContent = selected.size ? `${selected.size} ticked` : '';
 
   const overhead = state.overhead;
   $('overhead').innerHTML = `<div class="row" data-id="${esc(overhead.id)}">
@@ -191,7 +192,7 @@ function render() {
   $('finished').innerHTML = groupItems(done).map((g) => groupHtml(g, 'done')).join('');
   $('toggleFin').textContent = showFinished ? 'Hide' : 'Show';
   $('toggleFin').hidden = !done.length;
-  $('expFin').hidden = !done.length;
+  for (const box of document.querySelectorAll('input[data-some]')) box.indeterminate = true;
   $('dataDir').textContent = state.dataDir || '';
 }
 
@@ -215,6 +216,7 @@ document.addEventListener('click', async (ev) => {
       for (const m of members) if (target.checked) selected.add(m.id); else selected.delete(m.id);
       render();
     } else if (act === 'group-finish') {
+      for (const m of members) selected.delete(m.id);
       await api('finishItems', { ids: members.map((m) => m.id) });
       toast(`All ${members.length} \u00d7 ${members[0].name} marked finished. They are under Finished if you need one back.`);
     } else if (act === 'group-edit') openPieceDialog(members[0], members);
@@ -226,6 +228,7 @@ document.addEventListener('click', async (ev) => {
     if (target.checked) selected.add(item.id); else selected.delete(item.id);
     render();
   } else if (act === 'finish') {
+    selected.delete(item.id);
     await api('finishItems', { ids: [item.id] });
     toast(`${item.label} marked finished. It is under Finished if you need it back.`);
   } else if (act === 'reopen') {
@@ -240,27 +243,15 @@ document.addEventListener('keydown', (ev) => {
 });
 
 $('finishBtn').onclick = async () => {
-  const count = [...selected].reduce((n, id) => n + findItem(id).quantity, 0);
-  await api('finishItems', { ids: [...selected] });
-  selected.clear();
+  const ticked = state.items.filter((i) => selected.has(i.id) && i.status !== 'finished');
+  await api('finishItems', { ids: ticked.map((i) => i.id) });
+  for (const item of ticked) selected.delete(item.id);
   render();
-  toast(`${pieces(count)} marked finished.`);
+  toast(`${pieces(ticked.reduce((n, i) => n + i.quantity, 0))} marked finished.`);
 };
+$('clearSel').onclick = () => { selected.clear(); render(); };
 $('toggleFin').onclick = () => { showFinished = !showFinished; render(); };
 $('dataDir').onclick = () => api('openDataFolder');
-$('reportBtn').onclick = async () => {
-  $('reportBtn').disabled = true;
-  try {
-    const result = await api('exportReport');
-    if (result.file) toast(`Saved the report to ${result.file}`);
-  } finally { $('reportBtn').disabled = false; }
-};
-for (const [button, scope] of [['expFin', 'finished'], ['expAll', 'all']]) {
-  $(button).onclick = async () => {
-    const result = await api('exportCsv', { scope });
-    if (result.file) toast(`Wrote ${result.count} row${result.count === 1 ? '' : 's'} to ${result.file}`);
-  };
-}
 
 // ---- add / edit a piece ------------------------------------------------
 
@@ -403,6 +394,130 @@ function openLog(item) {
   $('logDlg').showModal();
 }
 $('logClose').onclick = () => $('logDlg').close();
+
+// ---- time report -------------------------------------------------------
+
+const REPORT_PRESETS = [['this-week', 'This week'], ['last-week', 'Last week'], ['this-month', 'This month'],
+  ['last-month', 'Last month'], ['this-year', 'This year'], ['all-time', 'All time']];
+const dayStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fmtDate = (day) => new Date(`${day}T12:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+/** The day weeks start on where this computer is set up for: 0 is Sunday, 1 Monday. */
+function weekStartsOn() {
+  try {
+    const locale = new Intl.Locale(navigator.language);
+    return (locale.getWeekInfo ? locale.getWeekInfo() : locale.weekInfo).firstDay % 7;
+  } catch { return 0; }
+}
+
+function presetDates(id) {
+  const today = new Date(Date.now() + clockSkew);
+  const [y, m, d] = [today.getFullYear(), today.getMonth(), today.getDate()];
+  const week = d - (today.getDay() - weekStartsOn() + 7) % 7; // day of the month this week began; Date copes with 0 and below
+  const span = (from, to) => ({ from: dayStr(from), to: dayStr(to) });
+  if (id === 'this-week') return span(new Date(y, m, week), new Date(y, m, week + 6));
+  if (id === 'last-week') return span(new Date(y, m, week - 7), new Date(y, m, week - 1));
+  if (id === 'this-month') return span(new Date(y, m, 1), new Date(y, m + 1, 0));
+  if (id === 'last-month') return span(new Date(y, m - 1, 1), new Date(y, m, 0));
+  if (id === 'this-year') return span(new Date(y, 0, 1), new Date(y, 11, 31));
+  return { from: '', to: '' };
+}
+
+// The days are remembered as "last week", not as dates, so next week it means next week's last week.
+const remembered = (key, fallback) => { try { return localStorage.getItem(key) || fallback; } catch { return fallback; } };
+const remember = (key, value) => { try { localStorage.setItem(key, value); } catch { /* a nicety, not a need */ } };
+let reportPreset = remembered('reportPreset', 'all-time'); // null while the dates are the user's own
+let reportScope = remembered('reportScope', 'all');
+const REPORT_SCOPES = [['all', 'Everything'], ['ticked', 'Ticked'], ['bench', 'On the bench'], ['finished', 'Finished']];
+
+const reportChoice = () => ({ scope: reportScope, ids: [...selected], from: $('repFrom').value, to: $('repTo').value });
+
+async function updateReport() {
+  const { from, to } = reportChoice();
+  const match = REPORT_PRESETS.find(([id]) => presetDates(id).from === from && presetDates(id).to === to);
+  reportPreset = match ? match[0] : null;
+  for (const button of $('reportPresets').children) button.setAttribute('aria-pressed', button.dataset.preset === reportPreset);
+  for (const button of $('reportScopes').children) {
+    const id = button.dataset.scope;
+    button.setAttribute('aria-pressed', id === reportScope);
+    if (id === 'ticked') {
+      button.disabled = !selected.size;
+      button.textContent = selected.size ? `Ticked (${selected.size})` : 'Ticked';
+      button.title = selected.size ? '' : 'Tick pieces on the lists first, then come back here';
+    }
+  }
+  const days = from && to ? (from === to ? `On ${fmtDate(from)}` : `${fmtDate(from)} to ${fmtDate(to)}`) :
+    from ? `Since ${fmtDate(from)}` : to ? `Up to ${fmtDate(to)}` : 'All time';
+  const backwards = !!from && !!to && from > to;
+  let text = '"From" has to be on or before "To".';
+  let empty = false;
+  if (!backwards) {
+    const found = await api('exportPreview', reportChoice());
+    empty = !found.pieces && !found.overhead;
+    text = empty ? `${days}: nothing to report. Pieces are left out when they have no time on these days and weren't finished on them.` :
+      `${days}: ${pieces(found.pieces)}, ${fmtDur(found.making)} on them${found.overhead ? ` and ${fmtDur(found.overhead)} of TimeOverhead` : ''},
+       in ${found.sessions} session${found.sessions === 1 ? '' : 's'}. Time counts on the day its session was clocked in.`;
+  }
+  $('reportSummary').textContent = text.replace(/\s+/g, ' ');
+  $('reportSave').disabled = $('reportCsv').disabled = backwards || empty;
+}
+
+function openReport() {
+  if (reportPreset) ({ from: $('repFrom').value, to: $('repTo').value } = presetDates(reportPreset)); // else: the dates typed last time
+  // Pieces ticked on the lists are most likely what the report is wanted for.
+  if (selected.size) reportScope = 'ticked';
+  else if (reportScope === 'ticked') reportScope = 'all';
+  $('reportDlg').showModal();
+  updateReport();
+}
+
+$('reportScopes').innerHTML = REPORT_SCOPES.map(([id, label]) => `<button type="button" data-scope="${id}" aria-pressed="false">${label}</button>`).join('');
+$('reportPresets').innerHTML = REPORT_PRESETS.map(([id, label]) => `<button type="button" data-preset="${id}" aria-pressed="false">${label}</button>`).join('');
+$('reportScopes').onclick = (ev) => {
+  if (!ev.target.dataset.scope) return;
+  reportScope = ev.target.dataset.scope;
+  updateReport();
+};
+$('reportPresets').onclick = (ev) => {
+  if (!ev.target.dataset.preset) return;
+  ({ from: $('repFrom').value, to: $('repTo').value } = presetDates(ev.target.dataset.preset));
+  updateReport();
+};
+$('repFrom').oninput = $('repTo').oninput = updateReport;
+$('reportBtn').onclick = openReport;
+$('reportCancel').onclick = () => $('reportDlg').close();
+
+async function saveReport(method) {
+  $('reportSave').disabled = $('reportCsv').disabled = true;
+  try {
+    const result = await api(method, reportChoice());
+    if (!result.file) return; // backed out of choosing where to save: the choices are still there to change
+    remember('reportPreset', reportPreset || '');
+    if (reportScope !== 'ticked') remember('reportScope', reportScope);
+    $('reportDlg').close();
+    toast(method === 'exportCsv' ? `Wrote ${result.count} row${result.count === 1 ? '' : 's'} to ${result.file}` : `Saved the report to ${result.file}`);
+  } finally { if ($('reportDlg').open) updateReport(); }
+}
+$('reportForm').addEventListener('submit', (ev) => { ev.preventDefault(); saveReport('exportReport'); });
+$('reportCsv').onclick = () => saveReport('exportCsv');
+
+// ---- about, and the menu bar -------------------------------------------
+
+function openAbout() {
+  $('aboutVersion').textContent = `Version ${state.app.version}`;
+  $('aboutDetail').textContent = `Built on Electron ${state.app.electron}. Your time card is kept in ${state.dataDir}`;
+  $('aboutDlg').showModal();
+  $('aboutClose').focus();
+}
+$('aboutClose').onclick = () => $('aboutDlg').close();
+$('aboutHelp').onclick = () => { $('aboutDlg').close(); api('openHelp'); };
+$('aboutSite').onclick = () => api('openHomepage');
+
+const menuActions = { add: () => openPieceDialog(null), report: openReport, about: openAbout };
+window.timecard.onMenu((action) => {
+  if (document.querySelector('dialog[open]')) return; // one thing at a time
+  menuActions[action]();
+});
 
 // ---- clocking in and out -----------------------------------------------
 

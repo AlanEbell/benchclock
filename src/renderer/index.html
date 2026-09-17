@@ -13,7 +13,7 @@
   <header class="top">
     <h1>BenchClock</h1>
     <span class="spacer"></span>
-    <button id="reportBtn" title="Every piece, current and finished, with the time spent on it">Time report (PDF)</button>
+    <button id="reportBtn" title="A PDF report or a CSV file: of every piece or the ones you choose, for a week, a month or any dates">Report or export</button>
   </header>
 
   <section class="clock" id="clock">
@@ -30,20 +30,18 @@
     <h2>On the bench <small id="benchCount"></small></h2>
     <span class="spacer"></span>
     <span id="selCount" class="muted"></span>
+    <button id="clearSel" class="quiet" hidden>Untick all</button>
     <button id="finishBtn" hidden>Mark finished</button>
     <button class="primary" id="addBtn"><span class="glyph" id="addGlyph"></span>Add a piece</button>
   </div>
   <div class="list" id="bench"></div>
-  <p class="muted tip" id="benchTip" hidden>Done with something? Press <b>Finish</b> on its line. To finish several at once, tick them and press <b>Mark finished</b> at the top.</p>
+  <p class="muted tip" id="benchTip" hidden>Done with something? Press <b>Finish</b> on its line. To finish several at once, tick them and press <b>Mark finished</b> at the top. Ticks also pick the pieces for <b>Report or export</b>.</p>
 
   <div class="list overhead" id="overhead"></div>
 
   <div class="section-head">
     <h2>Finished <small id="finCount"></small></h2>
     <button id="toggleFin" class="quiet">Show</button>
-    <span class="spacer"></span>
-    <button id="expFin">Export finished (CSV)</button>
-    <button id="expAll">Export everything (CSV)</button>
   </div>
   <div class="list" id="finished" hidden></div>
 
@@ -136,6 +134,43 @@
   <h2 id="logTitle"></h2>
   <div id="logBody"></div>
   <div class="actions"><span class="spacer"></span><button type="button" id="logClose">Close</button></div>
+</dialog>
+
+<dialog id="reportDlg">
+  <form method="dialog" id="reportForm">
+    <h2>Report or export</h2>
+    <div class="field-label">Which pieces?</div>
+    <div class="presets" id="reportScopes"></div>
+    <div class="field-label">Which days? <span class="muted">- pick one of these, or set the dates yourself</span></div>
+    <div class="presets" id="reportPresets"></div>
+    <div class="dates">
+      <div><label for="repFrom">From</label><input type="date" id="repFrom"></div>
+      <div><label for="repTo">To</label><input type="date" id="repTo"></div>
+    </div>
+    <p class="hint gap" id="reportSummary"></p>
+    <div class="actions">
+      <span class="spacer"></span>
+      <button type="button" id="reportCancel">Cancel</button>
+      <button type="button" id="reportCsv" title="One row per piece, for a spreadsheet">Save as CSV</button>
+      <button type="submit" class="primary" id="reportSave" title="A report laid out for reading and printing">Save as PDF</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="aboutDlg">
+  <div class="about">
+    <img src="icon.png" alt="" width="84" height="84">
+    <h2>BenchClock</h2>
+    <p class="version" id="aboutVersion"></p>
+    <p>A time card for jewelry artists: clock in and out, and split each session across the pieces on the bench.</p>
+    <p class="hint" id="aboutDetail"></p>
+  </div>
+  <div class="actions">
+    <button type="button" id="aboutHelp">Open the help</button>
+    <button type="button" id="aboutSite">Website</button>
+    <span class="spacer"></span>
+    <button type="button" class="primary" id="aboutClose">Close</button>
+  </div>
 </dialog>
 
 <dialog id="askDlg">

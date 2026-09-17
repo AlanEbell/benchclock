@@ -5,9 +5,10 @@ const os = require('node:os');
 const { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, protocol, shell } = require('electron');
 
 const {
-  TimeCard, TimeCardError, labelItems, toIso, FINISHED, PIECE_TYPES,
+  TimeCard, TimeCardError, labelItems, toIso, checkPeriod, narrowItem, narrowItems, FINISHED, OVERHEAD, PIECE_TYPES,
 } = require('../core/timecard.js');
-const { buildReportHtml } = require('./report.js');
+const { buildReportHtml, periodLabel } = require('./report.js');
+const { version, homepage } = require('../../package.json');
 
 const PHOTO_SIZE = 512; // library photos are square and small: they are icons, not an archive
 const PHOTO_NAME = /^[0-9a-f]{16}\.jpg$/;
@@ -15,6 +16,7 @@ const PHOTO_NAME = /^[0-9a-f]{16}\.jpg$/;
 const dataDirArg = process.argv.find((arg) => arg.startsWith('--data-dir='));
 let card;
 let mainWindow;
+let helpWindow;
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'bench-photo', privileges: { secure: true } }]);
 
@@ -29,6 +31,7 @@ function buildState() {
     photos: card.listPhotos(),
     types: PIECE_TYPES,
     dataDir: card.dataDir,
+    app: { version, electron: process.versions.electron },
   };
 }
 
@@ -48,11 +51,38 @@ function importPhoto(file) {
   return card.addPhoto(small.toJPEG(88));
 }
 
-/** Lay the report out in a hidden window and print that to a PDF file. */
-async function writeReportPdf(file) {
+// What a report or an export can be about.
+const SCOPES = { all: 'Every piece', ticked: 'Ticked pieces', bench: 'Pieces on the bench', finished: 'Finished pieces' };
+
+/**
+ * Work out what a report or export covers. `scope` picks the pieces (`ids` are the ticked ones) and
+ * `from`/`to` the days. TimeOverhead only comes along when every piece does.
+ */
+function choose({ scope = 'all', ids = [], from, to } = {}) {
+  if (!Object.hasOwn(SCOPES, scope)) throw new TimeCardError(`Unknown choice of pieces: ${scope}`);
+  const period = checkPeriod({ from, to });
+  if (!Array.isArray(ids)) ids = [];
+  const wanted = {
+    all: () => true, ticked: (i) => ids.includes(i.id), bench: (i) => i.status !== FINISHED, finished: (i) => i.status === FINISHED,
+  }[scope];
+  // labelled first, so "(2 of 3)" still means what it does on screen
+  return { scope, period, items: labelItems(card.listItems()).filter(wanted), overhead: scope === 'all' ? card.overheadItem() : null };
+}
+
+/** For the names of saved files: "finished from 2026-09-07 to 2026-09-13", or today's date when there is nothing to say. */
+function fileWords({ scope, period }) {
+  const words = [scope !== 'all' && scope, period.from && `from ${period.from}`, period.to && `to ${period.to}`].filter(Boolean);
+  return words.length ? words.join(' ') : toIso(new Date()).slice(0, 10);
+}
+
+/** Lay the report out in a hidden window and print that to a PDF file. `choice` is what choose() takes; leave it out for everything. */
+async function writeReportPdf(file, choice = {}) {
+  const { scope, period, items, overhead } = choose(choice);
+  const pieces = scope === 'all' ? '' : SCOPES[scope];
   const html = buildReportHtml({
-    items: labelItems(card.listItems()), overhead: card.overheadItem(), types: PIECE_TYPES, photosDir: card.photosDir,
+    items, overhead, types: PIECE_TYPES, photosDir: card.photosDir, period, pieces, handPicked: scope === 'ticked',
   });
+  const covers = [pieces, periodLabel(period)].filter(Boolean).join(' \u00b7 ');
   const page = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'benchclock-report-')), 'report.html');
   fs.writeFileSync(page, html, 'utf8');
   const printer = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
@@ -64,13 +94,19 @@ async function writeReportPdf(file) {
       pageSize: letter ? 'Letter' : 'A4', printBackground: true,
       margins: { top: 0.6, bottom: 0.7, left: 0.55, right: 0.55 }, // inches
       displayHeaderFooter: true, headerTemplate: '<span></span>',
-      footerTemplate: `<div style="${small} display:flex; justify-content:space-between;"><span>BenchClock time report</span>` +
+      footerTemplate: `<div style="${small} display:flex; justify-content:space-between;"><span>BenchClock time report${covers ? ` \u00b7 ${covers}` : ''}</span>` +
         '<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>',
     }));
   } finally {
     printer.destroy();
     fs.rmSync(path.dirname(page), { recursive: true, force: true });
   }
+}
+
+/** The chosen pieces with only the chosen days' time on them, TimeOverhead last: the rows of a CSV. */
+function exportRows({ scope, period, items, overhead }) {
+  const ranged = period.from || period.to;
+  return [...narrowItems(items, period, scope === 'ticked'), ...(overhead ? [ranged ? narrowItem(overhead, period) : overhead] : [])];
 }
 
 const api = {
@@ -95,30 +131,42 @@ const api = {
     return picked.canceled ? { photo: null } : { photo: importPhoto(picked.filePaths[0]) };
   },
 
-  async exportCsv({ scope }) {
-    const stamp = toIso(new Date()).slice(0, 10).replace(/-/g, '');
+  /** What the choices in the report box come to, before anything is saved. */
+  exportPreview(choice) {
+    const rows = exportRows(choose(choice));
+    const pieces = rows.filter((i) => i.status !== OVERHEAD);
+    return {
+      pieces: pieces.reduce((n, i) => n + i.quantity, 0),
+      making: pieces.reduce((n, i) => n + i.total_seconds, 0),
+      overhead: rows.filter((i) => i.status === OVERHEAD).reduce((n, i) => n + i.total_seconds, 0),
+      sessions: new Set(rows.flatMap((i) => i.time_entries.map((e) => e.session_id))).size,
+    };
+  },
+
+  async exportCsv(choice) {
+    const chosen = choose(choice);
     const picked = await dialog.showSaveDialog(mainWindow, {
-      title: 'Export CSV', defaultPath: path.join(app.getPath('documents'), `timecard-${scope}-${stamp}.csv`),
+      title: 'Export CSV', defaultPath: path.join(app.getPath('documents'), `BenchClock ${fileWords(chosen)}.csv`),
       filters: [{ name: 'CSV file', extensions: ['csv'] }],
     });
     if (picked.canceled) return { file: null };
-    const items = scope === 'finished' ? card.listItems().filter((i) => i.status === FINISHED) : undefined;
-    return { file: picked.filePath, count: card.exportCsv(picked.filePath, items) };
+    return { file: picked.filePath, count: card.exportCsv(picked.filePath, exportRows(chosen)) };
   },
 
-  async exportReport() {
-    const stamp = toIso(new Date()).slice(0, 10);
+  async exportReport(choice) {
     const picked = await dialog.showSaveDialog(mainWindow, {
-      title: 'Save time report', defaultPath: path.join(app.getPath('documents'), `BenchClock report ${stamp}.pdf`),
+      title: 'Save time report', defaultPath: path.join(app.getPath('documents'), `BenchClock report ${fileWords(choose(choice))}.pdf`),
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
     });
     if (picked.canceled) return { file: null };
-    await writeReportPdf(picked.filePath);
+    await writeReportPdf(picked.filePath, choice);
     shell.openPath(picked.filePath); // show it straight away in the computer's PDF viewer
     return { file: picked.filePath };
   },
 
   openDataFolder: () => { shell.openPath(card.dataDir); },
+  openHelp: () => { openHelp(); },
+  openHomepage: () => { shell.openExternal(homepage); },
 };
 
 ipcMain.handle('api', async (event, method, payload) => {
@@ -133,20 +181,94 @@ ipcMain.handle('api', async (event, method, payload) => {
   }
 });
 
+// read through fs so it also works from inside the packaged app archive
+const windowIcon = () => nativeImage.createFromBuffer(fs.readFileSync(path.join(__dirname, '..', 'renderer', 'icon.png')));
+
+/** A window's own page and nothing else: no pop-ups, no following links away. */
+function stayOnPage(win) {
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event) => event.preventDefault());
+}
+
+/** The guide, in a window of its own so it can sit beside the app while it is read. */
+function openHelp() {
+  if (helpWindow) {
+    if (helpWindow.isMinimized()) helpWindow.restore();
+    helpWindow.show();
+    helpWindow.focus();
+    return;
+  }
+  helpWindow = new BrowserWindow({
+    width: 780, height: 820, minWidth: 420, minHeight: 360, show: false,
+    title: 'BenchClock Help', backgroundColor: '#f5f1e8', icon: windowIcon(),
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false },
+  });
+  if (process.platform !== 'darwin') helpWindow.removeMenu();
+  helpWindow.once('ready-to-show', () => helpWindow.show());
+  helpWindow.on('closed', () => { helpWindow = null; });
+  stayOnPage(helpWindow);
+  helpWindow.loadFile(path.join(__dirname, '..', 'renderer', 'help.html'));
+}
+
+/** The menu bar. Entries that belong to the page are passed on to it (see app.js, menuActions). */
+function buildMenu() {
+  const mac = process.platform === 'darwin';
+  const toPage = (action) => () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    mainWindow.webContents.send('menu', action);
+  };
+  const line = { type: 'separator' };
+  const about = { label: 'About BenchClock', click: toPage('about') };
+  return Menu.buildFromTemplate([
+    ...(mac ? [{
+      label: app.name,
+      submenu: [about, line, { role: 'services' }, line, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, line, { role: 'quit' }],
+    }] : []),
+    {
+      label: '&File',
+      submenu: [
+        { label: 'Add a piece\u2026', accelerator: 'CmdOrCtrl+N', click: toPage('add') },
+        line,
+        { label: 'Report or export\u2026', accelerator: 'CmdOrCtrl+P', click: toPage('report') },
+        line,
+        { label: 'Open the data folder', click: () => { shell.openPath(card.dataDir); } },
+        ...(mac ? [] : [line, { role: 'quit' }]),
+      ],
+    },
+    {
+      label: '&Edit',
+      submenu: [{ role: 'undo' }, { role: 'redo' }, line, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
+    },
+    {
+      label: '&View',
+      submenu: [
+        { role: 'zoomIn' }, { role: 'zoomOut' }, { role: 'resetZoom' }, line, { role: 'togglefullscreen' },
+        ...(app.isPackaged ? [] : [line, { role: 'reload' }, { role: 'toggleDevTools' }]), // only when run from the source
+      ],
+    },
+    {
+      label: '&Help', role: 'help',
+      submenu: [{ label: 'BenchClock Help', accelerator: 'F1', click: openHelp }, ...(mac ? [] : [line, about])],
+    },
+  ]);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000, height: 860, minWidth: 640, minHeight: 520, show: false,
-    title: 'BenchClock', backgroundColor: '#f5f1e8', autoHideMenuBar: true,
-    // read through fs so it also works from inside the packaged app archive
-    icon: nativeImage.createFromBuffer(fs.readFileSync(path.join(__dirname, '..', 'renderer', 'icon.png'))),
+    title: 'BenchClock', backgroundColor: '#f5f1e8', icon: windowIcon(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false,
     },
   });
   mainWindow.once('ready-to-show', () => mainWindow.show());
-  // This window only ever shows the app's own page.
-  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    if (helpWindow) helpWindow.destroy(); // the guide doesn't outlive the app
+  });
+  stayOnPage(mainWindow);
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 }
 
@@ -167,8 +289,8 @@ if (!app.requestSingleInstanceLock()) {
       if (!PHOTO_NAME.test(name) || !fs.existsSync(file)) return new Response('', { status: 404 });
       return new Response(fs.readFileSync(file), { headers: { 'content-type': 'image/jpeg' } });
     });
-    // The default menu is full of browser and developer entries that would only confuse.
-    if (process.platform !== 'darwin' && app.isPackaged) Menu.setApplicationMenu(null);
+    // In place of the default menu, which is full of browser and developer entries that would only confuse.
+    Menu.setApplicationMenu(buildMenu());
     createWindow();
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   });

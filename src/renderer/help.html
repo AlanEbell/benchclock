@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BenchClock Help</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="help.css">
+</head>
+<body class="help">
+<main id="top">
+  <header>
+    <img src="icon.png" alt="" width="64" height="64">
+    <div>
+      <h1>BenchClock Help</h1>
+      <p class="lead">A time card for jewelry artists: clock in, work, clock out, and say where the time went.</p>
+    </div>
+  </header>
+
+  <nav aria-label="Contents">
+    <a href="#idea">The idea in one minute</a>
+    <a href="#first-day">Your first day, step by step</a>
+    <a href="#clock">Clocking in and out</a>
+    <a href="#dividing">Dividing a session between pieces</a>
+    <a href="#overhead">TimeOverhead</a>
+    <a href="#pieces">Adding and editing pieces</a>
+    <a href="#several">Making several of one design</a>
+    <a href="#photos">Photos</a>
+    <a href="#finishing">Finishing and reopening</a>
+    <a href="#ticks">Tick boxes</a>
+    <a href="#log">The time log of a piece</a>
+    <a href="#reports">Reports and exports</a>
+    <a href="#data">Where your data lives, and backing it up</a>
+    <a href="#menu">The menu and keyboard shortcuts</a>
+    <a href="#questions">Questions and fixes</a>
+  </nav>
+
+  <section id="idea">
+    <h2>The idea in one minute</h2>
+    <p>Nobody at a bench works on one thing from start to finish with a stopwatch running. You solder a ring, pickle it,
+      set a stone in something else while it soaks, answer the phone, and go back. BenchClock doesn't ask you to time each
+      of those. It asks two things:</p>
+    <ol>
+      <li><b>When did you sit down and when did you get up?</b> That is one <i>session</i>: clock in, clock out.</li>
+      <li><b>Roughly what share of that session went to each piece?</b> You answer in percentages when you clock out.</li>
+    </ol>
+    <p>From those two answers it keeps a running total for every piece, works out the time per piece when you make several,
+      and can report on any week, month or stretch of days you like.</p>
+    <div class="example">A three hour session, clocked out as <b>50%</b> moonstone ring, <b>30%</b> hoop earrings, the rest
+      unassigned, puts 1h 30m on the ring, 54m on the hoops, and the remaining 36m on <a href="#overhead">TimeOverhead</a>.</div>
+  </section>
+
+  <section id="first-day">
+    <h2>Your first day, step by step</h2>
+    <ol>
+      <li>Press <b class="ui">Add a piece</b>, type a name, tap what it is (ring, earrings, pendant&hellip;), press <b class="ui">Add</b>.
+        Do that for each thing on your bench. It appears under <b class="ui">On the bench</b>, in the <b class="ui">Getting started</b> group.</li>
+      <li>When you sit down to work, press the big <b class="ui">Clock in</b> button. The timer starts.</li>
+      <li>Work. You can close the window or shut the computer down; you stay clocked in.</li>
+      <li>When you stop, press <b class="ui">Clock out</b>. Type a percentage beside each piece you worked on and press <b class="ui">Clock out</b> again.</li>
+      <li>When a piece is done, press <b class="ui">Finish</b> on its line.</li>
+      <li>At the end of the week or the month, press <b class="ui">Report or export</b> for a PDF of where the time went.</li>
+    </ol>
+  </section>
+
+  <section id="clock">
+    <h2>Clocking in and out</h2>
+    <p>The panel at the top shows whether you are clocked in, a running timer, and when the session began.</p>
+    <ul>
+      <li><b class="ui">Clock in</b> starts a session. Only one session runs at a time.</li>
+      <li><b>Closing the window does not clock you out.</b> The session is written to disk the moment it starts, so it
+        survives closing the app, restarting the computer, even a power cut. Open BenchClock again and the timer is
+        still counting from when you clocked in.</li>
+      <li><b class="ui">Clock out</b> opens the clock-out box, described <a href="#dividing">in the next section</a>.
+        <b class="ui">Keep working</b> closes it without clocking out.</li>
+      <li><b class="ui">Discard session</b> appears while you are clocked in. It throws the session away without logging any
+        time. Use it if you clocked in by mistake.</li>
+    </ul>
+    <h3>If you forgot to clock out</h3>
+    <p>Press <b class="ui">Clock out</b> as usual, then change the <b class="ui">Clock-out time</b> at the top of the box to when you
+      really stopped. The session length and every piece's minutes are worked out again as you change it. The time has to
+      be after the time you clocked in.</p>
+  </section>
+
+  <section id="dividing">
+    <h2>Dividing a session between pieces</h2>
+    <p>The clock-out box lists every piece on the bench, plus anything you finished during this session. Beside each is
+      a box for a percentage, and beside that, what the percentage comes to in hours and minutes.</p>
+    <ul>
+      <li>Type a number next to the pieces you worked on. <b>Leave the others blank.</b></li>
+      <li>The numbers don't have to reach 100. Whatever you don't hand out goes to <a href="#overhead">TimeOverhead</a>, and the line
+        at the bottom shows the sum: <i>Pieces 80% + TimeOverhead 20% = 100%</i>.</li>
+      <li>They can't go over 100. If they do, the line turns red, tells you by how much, and <b class="ui">Clock out</b> waits until it is fixed.</li>
+      <li>Decimals are fine: 12.5 is accepted.</li>
+    </ul>
+    <h3>Two buttons that do the arithmetic</h3>
+    <ul>
+      <li><b class="ui">Split evenly</b> shares the whole 100% across every piece listed. An old-style entry that stands for six
+        pieces gets six shares.</li>
+      <li><b class="ui">Spread the rest</b> leaves the numbers you typed alone and shares what is left among the boxes that are
+        still blank. Type the ones you are sure of, then press it.</li>
+    </ul>
+    <h3>Groups in the clock-out box</h3>
+    <p>Several of one design show as a single line with one box. A number typed there is divided evenly among them.
+      Press the <b>&rsaquo;</b> mark to open the group and give each piece its own number; the group's box then shows what
+      they add up to.</p>
+    <div class="note">Percentages are estimates, and that is fine. "About half on the ring" recorded every day is worth far more than
+      exact timings you stop keeping after a week.</div>
+  </section>
+
+  <section id="overhead">
+    <h2>TimeOverhead</h2>
+    <p>TimeOverhead is the line that is always there, below the bench. It collects every part of a session you didn't give
+      to a piece: ordering metal, photographing, packing, cleaning up, email, a customer at the door.</p>
+    <p>You never type a number for it. It simply receives what is left. It can't be finished, renamed or deleted, and its
+      <b class="ui">Log</b> button shows every session that contributed to it.</p>
+    <p>It matters for pricing. The report shows what share of your clocked time is making and what share is TimeOverhead,
+      which tells you how much the unpaid hours add to the true cost of a piece.</p>
+  </section>
+
+  <section id="pieces">
+    <h2>Adding and editing pieces</h2>
+    <p><b class="ui">Add a piece</b> asks for:</p>
+    <ul>
+      <li><b>Name</b> of the piece or design. The only thing that is required.</li>
+      <li><b>What is it?</b> Earrings, ring, pendant, chain, bracelet, cuff or bangle, brooch, custom, or other. This picks the icon
+        and is shown in reports.</li>
+      <li><b>Photo</b>, optional. See <a href="#photos">Photos</a>.</li>
+      <li><b>How many?</b> See <a href="#several">Making several of one design</a>.</li>
+      <li><b>SKU and notes</b>, tucked under their own heading. Both appear on the piece's line, in reports and in the CSV.</li>
+    </ul>
+    <p>A new piece starts under <b class="ui">Getting started</b>. The first time it receives time at clock-out it moves up to
+      <b class="ui">In progress</b>, and the date is kept as the day it was started.</p>
+    <h3>Editing and deleting</h3>
+    <p><b class="ui">Edit</b> on a piece's line changes any of the above. <b class="ui">Delete piece</b> is at the bottom left of that box.
+      Deleting removes the piece <b>and all the time logged on it</b>, and can't be undone, so BenchClock asks first.
+      If the piece is simply done, <a href="#finishing">finish it</a> instead.</p>
+  </section>
+
+  <section id="several">
+    <h2>Making several of one design</h2>
+    <p>Set <b class="ui">How many</b> when you add the piece. Three moonstone rings are kept as three separate pieces that travel
+      together as one line: <i>Moonstone ring &times;3</i>, with a <b>&rsaquo;</b> mark in front.</p>
+    <ul>
+      <li><b>Closed</b>, the line works as a batch. It shows the total time and the average per piece, one number at clock-out
+        is divided among them, and <b class="ui">Finish all</b>, <b class="ui">Finish some</b> and <b class="ui">Edit all</b> act on the whole group.</li>
+      <li><b>Open</b> (press the name or the <b>&rsaquo;</b>), each piece is listed as <i>(1 of 3)</i>, <i>(2 of 3)</i>&hellip; with its own
+        time, log, tick box, <b class="ui">Finish</b> and <b class="ui">Edit</b>. Use this when one of them took longer, or one is finished early.</li>
+      <li><b class="ui">Finish some</b> asks how many are done and finishes the ones with the most time on them. To choose exactly
+        which, open the group and tick them.</li>
+      <li>The same design added again later is a <b>new group of its own</b>. Rings made in March are never mixed in with
+        the rings you add in June, so you can compare the two runs.</li>
+    </ul>
+  </section>
+
+  <section id="photos">
+    <h2>Photos</h2>
+    <p>A photo on a piece is shown in place of its icon, on the lists, at clock-out and in the PDF report.</p>
+    <ul>
+      <li>In the add or edit box, press <b class="ui">Add&hellip;</b> under <b class="ui">Photo</b> and choose a picture, or drop a picture anywhere on the box.</li>
+      <li>JPEG and PNG pictures work. iPhone HEIC photos need to be saved as JPEG first.</li>
+      <li>The picture is cropped to a square from its middle and shrunk. It is an icon, not an archive copy, so keep your originals.</li>
+      <li>Every photo you add stays in your <b>library</b> and is offered again for later pieces, which is handy for a design you
+        make repeatedly. <b class="ui">None</b> goes back to the icon.</li>
+      <li>To remove a photo from the library, point at it and press the <b>&times;</b>. Pieces that used it go back to their icon. BenchClock
+        tells you how many before it removes anything.</li>
+    </ul>
+  </section>
+
+  <section id="finishing">
+    <h2>Finishing and reopening</h2>
+    <ul>
+      <li><b class="ui">Finish</b> on a line finishes that piece. On a group, <b class="ui">Finish all</b> or <b class="ui">Finish some</b>.</li>
+      <li>To finish several different pieces at once, tick them and press <b class="ui">Mark finished</b> at the top of the bench.</li>
+      <li>Finished pieces move to the <b class="ui">Finished</b> list at the bottom. Press <b class="ui">Show</b> to see it. The date they were finished is kept.</li>
+      <li>A piece finished in the middle of a session is still offered at that session's clock-out, so its last stretch of time isn't lost.</li>
+      <li><b class="ui">Reopen</b> on a finished piece puts it back on the bench with all its time. Nothing is lost by finishing too early.</li>
+    </ul>
+  </section>
+
+  <section id="ticks">
+    <h2>Tick boxes</h2>
+    <p>Every piece, on the bench or finished, has a tick box. Ticks do two jobs:</p>
+    <ul>
+      <li><b class="ui">Mark finished</b> finishes the ticked pieces that are on the bench.</li>
+      <li><b class="ui">Report or export</b> can be limited to the ticked pieces. See below.</li>
+    </ul>
+    <p>Ticking a closed group ticks everything in it. The count of ticked pieces is shown at the top of the bench, next to
+      <b class="ui">Untick all</b>. Ticks are not saved: they are gone when the app is closed.</p>
+  </section>
+
+  <section id="log">
+    <h2>The time log of a piece</h2>
+    <p><b class="ui">Log</b> on any line lists every session that put time on that piece: when you clocked in and out, the share of
+      the session it was given, and what that came to. The title shows the total. At the bottom is the name of the file
+      the piece is stored in, in case you ever want to look at it directly.</p>
+  </section>
+
+  <section id="reports">
+    <h2>Reports and exports</h2>
+    <p><b class="ui">Report or export</b>, at the top right and in the <b class="ui">File</b> menu, opens one box that answers three questions.</p>
+    <h3>1. Which pieces?</h3>
+    <table>
+      <tr><th>Choice</th><th>What you get</th></tr>
+      <tr><td><b class="ui">Everything</b></td><td>Every piece, and TimeOverhead. The only choice that can show how your clocked time
+        divides between making and everything else.</td></tr>
+      <tr><td><b class="ui">Ticked</b></td><td>Only the pieces you ticked on the lists before opening the box: one customer's commission,
+        one collection, the pieces for a show. If anything is ticked when you open the box, this is chosen for you.</td></tr>
+      <tr><td><b class="ui">On the bench</b></td><td>Pieces that are not finished.</td></tr>
+      <tr><td><b class="ui">Finished</b></td><td>Pieces that are finished.</td></tr>
+    </table>
+    <h3>2. Which days?</h3>
+    <p>Press <b class="ui">This week</b>, <b class="ui">Last week</b>, <b class="ui">This month</b>, <b class="ui">Last month</b>, <b class="ui">This year</b> or
+      <b class="ui">All time</b>, or set <b class="ui">From</b> and <b class="ui">To</b> yourself. Click the little calendar in a date box to pick a day from
+      a calendar. Both days are included. Leave <b class="ui">From</b> empty for "everything up to", or <b class="ui">To</b> empty for "everything since".</p>
+    <ul>
+      <li><b>Only time from those days is counted.</b> A session counts on the day it was clocked in, even if it ran past midnight.</li>
+      <li><b>Pieces with nothing in those days are left out</b>: a piece is included if it had time on those days, or was finished on
+        them. Ticked pieces are the exception. You chose them by hand, so they are always listed, with 0h if need be.</li>
+      <li>The line under the dates tells you what your choices come to before you save anything: how many pieces, how much time, how many sessions.</li>
+      <li>Weeks start on the day your computer's region says they do, Sunday or Monday.</li>
+    </ul>
+    <p>Your choice of days is remembered as "last week" rather than as dates, so the next time you open the box it means the
+      week that is last week by then. That makes a Monday-morning report of last week two clicks.</p>
+    <h3>3. PDF or CSV?</h3>
+    <ul>
+      <li><b class="ui">Save as PDF</b> makes a report laid out for reading and printing, and opens it straight away. It starts with a
+        summary, then lists pieces that were worked on and pieces that were finished, with photo or icon, status, date,
+        number of sessions and time. Groups are totalled with each piece listed beneath. For a range of days there is a
+        <b>To date</b> column as well: the time in those days, and beside it everything the piece has taken so far.</li>
+      <li><b class="ui">Save as CSV</b> makes a file for a spreadsheet, one row per piece, with hours, minutes, minutes per piece and the
+        number of sessions. For a range of days those figures count those days only. With <b class="ui">Everything</b> the last row is TimeOverhead.</li>
+    </ul>
+    <div class="example"><b>Some reports worth making.</b> Last week, everything: did the hours go where you meant them to?
+      Last month, finished: what left the bench, and how long each piece really took (the <b>To date</b> column).
+      All time, ticked: the full history of one commission, to check your quote against.</div>
+  </section>
+
+  <section id="data">
+    <h2>Where your data lives, and backing it up</h2>
+    <p>Everything is kept as plain, readable files in one folder on your own computer. Nothing is sent anywhere, and there
+      is no account. The folder is named at the bottom of the main window; click it, or use <b class="ui">File &rsaquo; Open the data folder</b>.</p>
+    <table>
+      <tr><th>System</th><th>Folder</th></tr>
+      <tr><td>Linux</td><td><code>~/.local/share/BenchClock</code></td></tr>
+      <tr><td>Windows</td><td><code>%APPDATA%\BenchClock</code></td></tr>
+      <tr><td>macOS</td><td><code>~/Library/Application Support/BenchClock</code></td></tr>
+    </table>
+    <p>Inside are <code>items</code> (one file per piece), <code>sessions</code> (one file per clock-in and clock-out),
+      <code>photos</code> (your photo library) and, while you are clocked in, <code>current_session.json</code>.</p>
+    <ul>
+      <li><b>To back up</b>, copy the whole folder somewhere safe. <b>To restore</b> or move to a new computer, copy it back to the same place.</li>
+      <li><b>To keep it somewhere else</b>, such as a synced folder, set the environment variable <code>BENCHCLOCK_DATA_DIR</code> to the folder
+        you want before starting BenchClock. If files change on disk while the app is open, it picks the changes up when you come back to its window.</li>
+      <li>Uninstalling or updating BenchClock leaves this folder alone.</li>
+    </ul>
+  </section>
+
+  <section id="menu">
+    <h2>The menu and keyboard shortcuts</h2>
+    <table>
+      <tr><th>Menu</th><th>What is in it</th></tr>
+      <tr><td><b class="ui">File</b></td><td>Add a piece, Report or export, Open the data folder, Quit.</td></tr>
+      <tr><td><b class="ui">Edit</b></td><td>Undo, cut, copy and paste, for the boxes you type in.</td></tr>
+      <tr><td><b class="ui">View</b></td><td>Make everything larger or smaller, and full screen.</td></tr>
+      <tr><td><b class="ui">Help</b></td><td>This guide, and <b class="ui">About BenchClock</b>, which shows the version you are running
+        (on a Mac it is in the <b class="ui">BenchClock</b> menu). Have that to hand if you ever report a problem.</td></tr>
+    </table>
+    <table>
+      <tr><th>Keys</th><th>Does</th></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>N</kbd></td><td>Add a piece</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Report or export</td></tr>
+      <tr><td><kbd>F1</kbd></td><td>Open this guide</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close the box that is open, changing nothing</td></tr>
+      <tr><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd></td><td>One more or one fewer, in a <b class="ui">How many</b> box</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>&minus;</kbd> / <kbd>0</kbd></td><td>Larger, smaller, normal size</td></tr>
+      <tr><td><kbd>F11</kbd></td><td>Full screen</td></tr>
+      <tr><td><kbd>Alt</kbd> + <kbd>F</kbd>, <kbd>E</kbd>, <kbd>V</kbd>, <kbd>H</kbd></td><td>Open a menu (Linux and Windows)</td></tr>
+    </table>
+    <p>On a Mac, use <kbd>&#8984;</kbd> where this says <kbd>Ctrl</kbd>. A menu choice does nothing while a box is open: close the box first.</p>
+  </section>
+
+  <section id="questions">
+    <h2>Questions and fixes</h2>
+    <h3>I clocked in by mistake.</h3>
+    <p>Press <b class="ui">Discard session</b> next to the clock. No time is logged.</p>
+    <h3>I forgot to clock out last night.</h3>
+    <p>Clock out now, and set <b class="ui">Clock-out time</b> in the box to when you really stopped.</p>
+    <h3>I forgot to clock in.</h3>
+    <p>A session can't be started in the past. Clock in now and let the next sessions carry it, or accept that this one is missing.
+      The totals are estimates in any case.</p>
+    <h3>I gave the time to the wrong piece.</h3>
+    <p>A clocked-out session can't be edited inside BenchClock. The entries are plain text in the piece's file (its name is at the bottom
+      of the piece's <b class="ui">Log</b>), so they can be corrected by hand by someone comfortable editing a JSON file. Back the folder up first.</p>
+    <h3>I finished a piece too soon.</h3>
+    <p>Show the <b class="ui">Finished</b> list and press <b class="ui">Reopen</b> on it.</p>
+    <h3>My report is empty, or a piece is missing from it.</h3>
+    <p>Look at <b class="ui">Which days</b>. A piece is listed only if it had time on those days or was finished on them. Press <b class="ui">All time</b> to see
+      everything. Also check <b class="ui">Which pieces</b>: <b class="ui">Ticked</b> shows only what you ticked.</p>
+    <h3>My photo won't import.</h3>
+    <p>It is probably a HEIC picture from an iPhone. Save or export it as JPEG first.</p>
+    <h3>I opened BenchClock twice.</h3>
+    <p>Only one copy runs. Starting it again brings the window that is already open to the front.</p>
+    <h3>Which version do I have?</h3>
+    <p><b class="ui">Help &rsaquo; About BenchClock</b>.</p>
+    <a class="top-link" href="#top">Back to the top</a>
+  </section>
+
+  <footer>BenchClock keeps everything on your own computer, as plain files.</footer>
+</main>
+</body>
+</html>

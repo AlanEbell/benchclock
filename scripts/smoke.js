@@ -4,7 +4,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { app, nativeImage } = require('electron');
+const { app, nativeImage, BrowserWindow, Menu } = require('electron');
 
 const dataDir = (process.argv.find((a) => a.startsWith('--data-dir=')) || '').slice(11);
 assert.ok(dataDir, 'pass --data-dir=<empty folder>');
@@ -15,7 +15,10 @@ fs.writeFileSync(picture, nativeImage.createFromBuffer(
 const notPicture = path.join(dataDir, 'notes.txt');
 fs.writeFileSync(notPicture, 'hello');
 
+let started = false;
 app.on('browser-window-created', (event, win) => {
+  if (started) return; // only the app's own window; the report printer and the guide come later
+  started = true;
   win.webContents.once('did-finish-load', async () => {
     const run = (js) => win.webContents.executeJavaScript(`(async () => { ${js} })()`, true);
     try {
@@ -75,7 +78,62 @@ app.on('browser-window-created', (event, win) => {
       const bytes = fs.readFileSync(pdf);
       assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
       assert.ok(bytes.length > 5000, 'the PDF has content');
-      assert.equal(await run("return !!document.getElementById('reportBtn')"), true);
+
+      // the report box: which pieces, which days
+      const today = new Date();
+      const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      await run("$('reportBtn').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.equal(await run("return $('reportDlg').open && document.querySelector('#reportScopes [data-scope=ticked]').disabled"), true, 'nothing ticked yet');
+      await run("document.querySelector('[data-preset=this-month]').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.equal(await run("return $('repFrom').value"), ymd(new Date(today.getFullYear(), today.getMonth(), 1)));
+      assert.equal(await run("return $('repTo').value"), ymd(new Date(today.getFullYear(), today.getMonth() + 1, 0)));
+      assert.match(await run("return $('reportSummary').textContent"), /4 pieces, 1h 00m on them and 1h 00m of TimeOverhead, in 1 session/); // two rings with time, two finished today
+      await run("document.querySelector('[data-scope=finished]').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.match(await run("return $('reportSummary').textContent"), /2 pieces, 0h 00m on them, in 0 sessions/); // finished today, no time
+      await run("$('repFrom').value = '2001-01-01'; $('repTo').value = '2001-01-31'; $('repFrom').oninput(); await new Promise((r) => setTimeout(r, 300));");
+      assert.match(await run("return $('reportSummary').textContent"), /nothing to report/);
+      assert.equal(await run("return $('reportSave').disabled && $('reportCsv').disabled"), true);
+      await run("$('repTo').value = '2000-01-01'; $('repTo').oninput(); await new Promise((r) => setTimeout(r, 100));");
+      assert.match(await run("return $('reportSummary').textContent"), /on or before/);
+      await run("$('reportDlg').close()");
+      // ticks work on finished pieces too, and the box opens on them
+      await run("showFinished = true; render(); document.querySelector('#finished input[type=checkbox]').click();");
+      assert.equal(await run("return selected.size"), 2);
+      assert.equal(await run("return $('finishBtn').hidden"), true, 'nothing ticked is on the bench');
+      await run("$('reportBtn').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.equal(await run("return document.querySelector('[data-scope=ticked]').getAttribute('aria-pressed')"), 'true');
+      const tickedIds = await run("return [...selected]");
+      await run("$('reportDlg').close(); $('clearSel').click();");
+      assert.equal(await run("return selected.size"), 0);
+
+      const month = { from: ymd(new Date(today.getFullYear(), today.getMonth(), 1)), to: ymd(today) };
+      for (const [name, choice] of [['month', month], ['ticked', { scope: 'ticked', ids: tickedIds, ...month }], ['bench', { scope: 'bench' }]]) {
+        const file = path.join(dataDir, `report-${name}.pdf`);
+        await writeReportPdf(file, choice);
+        assert.equal(fs.readFileSync(file).subarray(0, 5).toString(), '%PDF-', `${name} report`);
+      }
+      const preview = await run(`return await api('exportPreview', ${JSON.stringify({ scope: 'bench', ...month })})`);
+      assert.deepEqual([preview.pieces, preview.sessions, preview.overhead], [2, 1, 0], 'only pieces with time in the month, no TimeOverhead');
+      assert.match(await run("try { await api('exportPreview', { from: 'soon' }); return 'accepted' } catch (e) { return e.message }"), /Couldn't understand the date/);
+
+      // the menu bar, the about box and the guide
+      const menus = Menu.getApplicationMenu().items.map((item) => item.label.replace('&', ''));
+      for (const label of ['File', 'Edit', 'View', 'Help']) assert.ok(menus.includes(label), `${label} menu`);
+      const helpMenu = Menu.getApplicationMenu().items.find((item) => item.label === '&Help').submenu.items.map((item) => item.label);
+      assert.deepEqual(helpMenu.filter(Boolean), process.platform === 'darwin' ? ['BenchClock Help'] : ['BenchClock Help', 'About BenchClock']);
+      win.webContents.send('menu', 'about');
+      await new Promise((r) => setTimeout(r, 300));
+      assert.equal(await run("return $('aboutDlg').open && $('aboutVersion').textContent"), `Version ${require('../package.json').version}`);
+      win.webContents.send('menu', 'report'); // ignored while a box is open
+      await new Promise((r) => setTimeout(r, 200));
+      assert.equal(await run("return $('reportDlg').open"), false);
+      await run("$('aboutHelp').click(); await new Promise((r) => setTimeout(r, 1200));");
+      const guide = BrowserWindow.getAllWindows().find((w) => w !== win);
+      assert.ok(guide, 'the guide opens in its own window');
+      assert.equal(guide.getTitle(), 'BenchClock Help');
+      assert.match(guide.webContents.getURL(), /help\.html$/);
+      await run("await api('openHelp'); await new Promise((r) => setTimeout(r, 300));");
+      assert.equal(BrowserWindow.getAllWindows().length, 2, 'asking again reuses the window');
       console.log('SMOKE OK');
     } catch (error) {
       console.error('SMOKE FAILED\n', error);

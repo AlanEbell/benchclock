@@ -121,6 +121,44 @@ function labelItems(items) {
   return items;
 }
 
+// ----- periods -----------------------------------------------------------
+// A period is { from, to }: local calendar days as 'YYYY-MM-DD', both included. Either end
+// may be left out, and with neither it means all time.
+
+function checkPeriod({ from, to } = {}) {
+  const clean = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new TimeCardError(`Couldn't understand the date '${value}'.`);
+    return value;
+  };
+  const period = { from: clean(from), to: clean(to) };
+  if (period.from && period.to && period.from > period.to) {
+    throw new TimeCardError('The "from" date has to be on or before the "to" date.');
+  }
+  return period;
+}
+
+// Times are stored as local time, so their first ten characters are the local day.
+const inPeriod = (iso, { from, to }) => !!iso && (!from || iso.slice(0, 10) >= from) && (!to || iso.slice(0, 10) <= to);
+
+/** A copy of `item` counting only the time clocked in during the period. Its whole-life total is kept as `all_seconds`. */
+function narrowItem(item, period) {
+  const entries = item.time_entries.filter((e) => inPeriod(e.clock_in, period));
+  const narrowed = { ...item, time_entries: entries, all_seconds: item.total_seconds };
+  refreshTotals(narrowed);
+  return narrowed;
+}
+
+/**
+ * The pieces that were worked on or finished during the period, each narrowed to it.
+ * With `keepAll` (the pieces were picked by hand) none is dropped for having nothing in it.
+ */
+function narrowItems(items, period, keepAll = false) {
+  if (!period.from && !period.to) return items;
+  return items.map((item) => narrowItem(item, period))
+    .filter((item) => keepAll || item.time_entries.length || (item.status === FINISHED && inPeriod(item.finished_at, period)));
+}
+
 const CSV_FIELDS = [
   'item_id', 'name', 'sku', 'type', 'photo', 'batch_id', 'quantity', 'status', 'created_at', 'started_at',
   'finished_at', 'total_hours', 'total_minutes', 'minutes_per_piece', 'work_sessions', 'notes',
@@ -438,6 +476,7 @@ class TimeCard {
 
 module.exports = {
   TimeCard, TimeCardError, labelItems, formatDuration, toIso, defaultDataDir,
+  checkPeriod, inPeriod, narrowItem, narrowItems,
   NOT_STARTED, IN_PROGRESS, FINISHED, OVERHEAD, OVERHEAD_ID, OVERHEAD_NAME,
   PIECE_TYPES, DEFAULT_TYPE, CSV_FIELDS, SCHEMA_VERSION,
 };

@@ -6,4 +6,5 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('timecard', {
   call: (method, payload) => ipcRenderer.invoke('api', method, payload),
   pathForFile: (file) => webUtils.getPathForFile(file), // for photos dropped onto the window
+  onMenu: (handler) => { ipcRenderer.on('menu', (event, action) => handler(action)); }, // a choice from the menu bar
 });
