@@ -18,6 +18,7 @@ if (!card.listItems().length) {
   const rings = card.addItem({ name: 'Moonstone ring', quantity: 3, separate: true, type: 'ring' });
   card.addItem({ name: 'Hammered cuff', notes: 'Commission for Dana', type: 'cuff', photo });
   card.addItem({ name: 'Rope chain', type: 'chain' });
+  card.addItem({ name: 'Moonstone ring', quantity: 2, separate: true, type: 'ring' }); // a later batch of the same design
   const [pendant] = card.addItem({ name: 'Opal pendant', type: 'pendant' });
   const t0 = new Date(Date.now() - 6 * HOUR);
   card.clockIn(t0);
@@ -33,7 +34,7 @@ app.on('browser-window-created', (event, win) => {
     const shot = async (name) => { await wait(500); fs.writeFileSync(path.join(out, `${name}.png`), (await win.webContents.capturePage()).toPNG()); };
     await wait(800);
     await shot('main');
-    await run("expanded.add('bench:moonstone ring'); render()");
+    await run("expanded.add('bench:' + state.items.find((i) => i.name === 'Moonstone ring').batch_id); render()");
     await shot('main-open');
     await run("openPieceDialog(null); $('pName').value = 'Garnet studs'; draft.type = 'earrings'; $('pQty').value = 4; $('pQty').dispatchEvent(new Event('input')); renderPickers();");
     await shot('add');

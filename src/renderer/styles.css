@@ -45,6 +45,7 @@ button.big { font-size: 18px; padding: 14px 34px; border-radius: 12px; }
 button.quiet { border-color: transparent; background: none; color: var(--muted); padding: 5px 9px; }
 button.quiet:hover { color: var(--ink); background: var(--soft); }
 button.danger { color: var(--warn); }
+button.quiet.go { color: var(--accent); font-weight: 600; }
 button.link { border: none; background: none; padding: 0; color: inherit; text-decoration: underline; font-size: inherit; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button .glyph { display: inline-block; width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; }
@@ -191,3 +192,4 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .toggle:hover .chev { color: var(--ink); }
 .row.child { padding-left: 51px; background: color-mix(in srgb, var(--soft) 45%, transparent); }
 .row.child.selected { background: var(--accent-soft); }
+.tip { margin: 8px 4px 0; }

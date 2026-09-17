@@ -41,6 +41,7 @@ const fmtClock = (secs) => {
   secs = Math.max(0, Math.floor(secs));
   return `${Math.floor(secs / 3600)}:${pad(Math.floor(secs / 60) % 60)}:${pad(secs % 60)}`;
 };
+const fmtDay = (iso) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 const fmtWhen = (iso) => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const localInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const pieces = (n) => `${n} piece${n === 1 ? '' : 's'}`;
@@ -48,11 +49,12 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const photoUrl = (name) => `bench-photo://library/${encodeURIComponent(name)}`;
 const findItem = (id) => (id === state.overhead.id ? state.overhead : state.items.find((i) => i.id === id));
 
-/** Pieces that share a name are shown as one group. Keeps the order of first appearance. */
-function groupByName(items) {
+/** Pieces added together are shown as one group; anything else stands alone. Keeps the order of first appearance. */
+const groupKey = (item) => item.batch_id || item.id;
+function groupItems(items) {
   const groups = new Map();
   for (const item of items) {
-    const key = item.name.toLowerCase();
+    const key = groupKey(item);
     if (!groups.has(key)) groups.set(key, { key, name: item.name, items: [] });
     groups.get(key).items.push(item);
   }
@@ -113,7 +115,8 @@ function rowHtml(item, child = false) {
   const check = finished ? '' :
     `<input type="checkbox" data-act="select" aria-label="Select ${esc(item.label)}" ${selected.has(item.id) ? 'checked' : ''}>`;
   const actions = finished ? '<button class="quiet" data-act="reopen">Reopen</button>' :
-    (item.quantity > 1 ? '<button class="quiet" data-act="part">Finish some</button>' : '');
+    `<button class="quiet go" data-act="finish">Finish</button>${
+      item.quantity > 1 ? '<button class="quiet" data-act="part">Finish some</button>' : ''}`;
   return `<div class="row ${child ? 'child' : ''} ${selected.has(item.id) ? 'selected' : ''}" data-id="${esc(item.id)}">
     ${check}${child ? '' : tile(item)}
     <div class="name"><b>${esc(item.label)}</b>${qty}<div class="meta">${meta}</div></div>
@@ -133,11 +136,12 @@ function groupHtml(group, list) {
   const check = list === 'bench' ? `<input type="checkbox" data-act="select-group" aria-label="Select all ${esc(group.name)}"
       ${picked === members.length ? 'checked' : ''} ${picked && picked < members.length ? 'data-some="1"' : ''}>` : '';
   const started = members.filter((i) => i.status === 'in_progress').length;
-  const meta = [members[0].sku && `SKU ${esc(members[0].sku)}`,
+  const meta = [members[0].sku && `SKU ${esc(members[0].sku)}`, `added ${fmtDay(members[0].created_at)}`,
     list === 'bench' && started && started < members.length && `${started} of ${members.length} started`,
     open ? 'each one listed below' : 'open to see each one'].filter(Boolean).join(' &middot; ');
   const actions = list === 'bench' ?
-    '<button class="quiet" data-act="group-part">Finish some</button><button class="quiet" data-act="group-edit">Edit all</button>' : '';
+    `<button class="quiet go" data-act="group-finish">Finish all</button><button class="quiet" data-act="group-part">Finish some</button>
+     <button class="quiet" data-act="group-edit">Edit all</button>` : '';
   return `<div class="row group ${picked === members.length ? 'selected' : ''}" data-group="${esc(group.key)}" data-list="${list}">
     ${check}${tile(members[0])}
     <div class="name toggle" data-act="toggle" role="button" tabindex="0" aria-expanded="${open}">${chevron(open)}<b>${esc(group.name)}</b><span
@@ -161,7 +165,7 @@ function render() {
   for (const id of [...selected]) if (!open.some((i) => i.id === id)) selected.delete(id);
 
   // A group counts as in progress as soon as any one of its pieces is.
-  const benchGroups = groupByName(open);
+  const benchGroups = groupItems(open);
   const started = (group) => group.items.some((i) => i.status === 'in_progress');
   const sections = [['In progress', benchGroups.filter(started)], ['Getting started', benchGroups.filter((g) => !started(g))]];
   $('bench').innerHTML = open.length ? sections.map(([title, groups]) => (
@@ -171,6 +175,7 @@ function render() {
   const openCount = open.reduce((n, i) => n + i.quantity, 0);
   $('benchCount').textContent = open.length ? pieces(openCount) : '';
   $('finishBtn').hidden = !selected.size;
+  $('benchTip').hidden = !open.length;
   $('selCount').textContent = selected.size ? `${selected.size} selected` : '';
 
   const overhead = state.overhead;
@@ -183,7 +188,7 @@ function render() {
 
   $('finCount').textContent = done.length ? pieces(done.reduce((n, i) => n + i.quantity, 0)) : '';
   $('finished').hidden = !showFinished || !done.length;
-  $('finished').innerHTML = groupByName(done).map((g) => groupHtml(g, 'done')).join('');
+  $('finished').innerHTML = groupItems(done).map((g) => groupHtml(g, 'done')).join('');
   $('toggleFin').textContent = showFinished ? 'Hide' : 'Show';
   $('toggleFin').hidden = !done.length;
   $('expFin').hidden = !done.length;
@@ -192,7 +197,7 @@ function render() {
 
 function groupMembers(row) {
   const pool = state.items.filter((i) => (row.dataset.list === 'done') === (i.status === 'finished'));
-  return pool.filter((i) => i.name.toLowerCase() === row.dataset.group);
+  return pool.filter((i) => groupKey(i) === row.dataset.group);
 }
 
 document.addEventListener('click', async (ev) => {
@@ -209,6 +214,9 @@ document.addEventListener('click', async (ev) => {
     } else if (act === 'select-group') {
       for (const m of members) if (target.checked) selected.add(m.id); else selected.delete(m.id);
       render();
+    } else if (act === 'group-finish') {
+      await api('finishItems', { ids: members.map((m) => m.id) });
+      toast(`All ${members.length} \u00d7 ${members[0].name} marked finished. They are under Finished if you need one back.`);
     } else if (act === 'group-edit') openPieceDialog(members[0], members);
     else if (act === 'group-part') openPart({ members });
     return;
@@ -217,6 +225,9 @@ document.addEventListener('click', async (ev) => {
   if (act === 'select') {
     if (target.checked) selected.add(item.id); else selected.delete(item.id);
     render();
+  } else if (act === 'finish') {
+    await api('finishItems', { ids: [item.id] });
+    toast(`${item.label} marked finished. It is under Finished if you need it back.`);
   } else if (act === 'reopen') {
     await api('reopenItem', { id: item.id });
     toast(`${item.label} is back on the bench.`);
@@ -419,7 +430,7 @@ async function openClockOut() {
 
   // Pieces that share a name are one closed line: one number, divided evenly. Opened, each has its own box.
   let html = '';
-  for (const group of groupByName(candidates)) {
+  for (const group of groupItems(candidates)) {
     const many = group.items.length > 1;
     const open = expanded.has(`out:${group.key}`);
     if (many) {

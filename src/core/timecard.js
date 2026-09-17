@@ -103,16 +103,16 @@ function asDate(when) {
 }
 
 /**
- * Give every item a display `label`. Separate pieces that share a name get
+ * Give every item a display `label`. Pieces added together as one batch get
  * "(1 of 3)" style labels so they can be told apart in the queue and at clock-out.
  */
 function labelItems(items) {
-  const byName = new Map();
+  const byBatch = new Map();
   for (const item of items) {
-    const key = item.name.toLowerCase();
-    byName.set(key, [...(byName.get(key) || []), item]);
+    const key = item.batch_id || item.id;
+    byBatch.set(key, [...(byBatch.get(key) || []), item]);
   }
-  for (const group of byName.values()) {
+  for (const group of byBatch.values()) {
     group.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
     group.forEach((item, index) => {
       item.label = group.length === 1 ? item.name : `${item.name} (${index + 1} of ${group.length})`;
@@ -122,7 +122,7 @@ function labelItems(items) {
 }
 
 const CSV_FIELDS = [
-  'item_id', 'name', 'sku', 'type', 'photo', 'quantity', 'status', 'created_at', 'started_at',
+  'item_id', 'name', 'sku', 'type', 'photo', 'batch_id', 'quantity', 'status', 'created_at', 'started_at',
   'finished_at', 'total_hours', 'total_minutes', 'minutes_per_piece', 'work_sessions', 'notes',
 ];
 
@@ -160,8 +160,9 @@ class TimeCard {
     const file = this.itemPath(itemId);
     if (!fs.existsSync(file)) throw new TimeCardError(`No piece with id ${itemId}`);
     const item = readJson(file);
-    if (!item.type) item.type = DEFAULT_TYPE; // files written before pieces had a type or photo
+    if (!item.type) item.type = DEFAULT_TYPE; // files written before pieces had these fields
     if (item.photo === undefined) item.photo = null;
+    if (item.batch_id === undefined) item.batch_id = null;
     return item;
   }
 
@@ -177,7 +178,7 @@ class TimeCard {
     if (!fs.existsSync(this.itemPath(OVERHEAD_ID))) {
       this.saveItem({
         schema_version: SCHEMA_VERSION, id: OVERHEAD_ID, sequence: 0, name: OVERHEAD_NAME, sku: '',
-        type: OVERHEAD, photo: null, quantity: 1, status: OVERHEAD, notes: 'Time clocked in but not spent on a piece.',
+        type: OVERHEAD, photo: null, batch_id: null, quantity: 1, status: OVERHEAD, notes: 'Time clocked in but not spent on a piece.',
         created_at: toIso(new Date()), started_at: null, finished_at: null, split_from: null,
         time_entries: [],
       });
@@ -198,8 +199,9 @@ class TimeCard {
   }
 
   /**
-   * Add a piece. With quantity > 1 either one shared batch is created, or
-   * (separate: true) that many individual pieces with the same name.
+   * Add a piece. With quantity > 1 either one entry standing for them all is created, or
+   * (separate: true) that many individual pieces sharing a `batch_id`. Every call is its
+   * own batch: three rings added next month do not join the three added today.
    */
   addItem({ name, quantity = 1, sku = '', notes = '', type = DEFAULT_TYPE, photo = null, separate = false }) {
     name = String(name ?? '').trim();
@@ -210,13 +212,14 @@ class TimeCard {
     if (!PIECE_TYPES.some((t) => t.id === type)) throw new TimeCardError(`Unknown kind of piece: ${type}`);
     photo = this.checkPhoto(photo);
     const counts = separate ? Array(quantity).fill(1) : [quantity];
+    const batchId = counts.length > 1 ? `batch-${crypto.randomBytes(4).toString('hex')}` : null;
     // A running number keeps same-named pieces in the order they were added.
     let sequence = Math.max(0, ...this.listItems().map((i) => i.sequence || 0));
     return counts.map((count) => {
       sequence += 1;
       const item = {
         schema_version: SCHEMA_VERSION, id: newId(name), sequence, name, sku: String(sku).trim(), type, photo,
-        quantity: count, status: NOT_STARTED, notes: String(notes).trim(), created_at: toIso(new Date()),
+        batch_id: batchId, quantity: count, status: NOT_STARTED, notes: String(notes).trim(), created_at: toIso(new Date()),
         started_at: null, finished_at: null, split_from: null, time_entries: [],
       };
       this.saveItem(item);
@@ -422,7 +425,7 @@ class TimeCard {
   exportCsv(file, items) {
     items = items || [...this.listItems(), this.overheadItem()];
     const rows = items.map((item) => [
-      item.id, item.name, item.sku, item.type, item.photo || '', item.quantity, item.status, item.created_at,
+      item.id, item.name, item.sku, item.type, item.photo || '', item.batch_id || '', item.quantity, item.status, item.created_at,
       item.started_at || '', item.finished_at || '', round2(item.total_seconds / 3600),
       round1(item.total_seconds / 60), round1(item.seconds_per_piece / 60),
       new Set(item.time_entries.map((e) => e.session_id)).size, item.notes,

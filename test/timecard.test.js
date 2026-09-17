@@ -32,6 +32,23 @@ test('batch versus separate pieces', () => {
   assert.equal(itemFiles().length, 5); // 4 + TimeOverhead
   assert.deepEqual(labelItems(card.listItems()).map((i) => i.label), [
     'Hoop earrings', 'Moonstone ring (1 of 3)', 'Moonstone ring (2 of 3)', 'Moonstone ring (3 of 3)']);
+  assert.equal(batch.batch_id, null);
+  assert.equal(new Set(singles.map((s) => s.batch_id)).size, 1);
+});
+
+test('pieces added later are a different batch, even with the same name', () => {
+  const first = card.addItem({ name: 'Moonstone ring', quantity: 3, separate: true });
+  const later = card.addItem({ name: 'Moonstone ring', quantity: 2, separate: true });
+  const [single] = card.addItem({ name: 'Moonstone ring' });
+  assert.notEqual(first[0].batch_id, later[0].batch_id);
+  assert.equal(single.batch_id, null);
+  const labels = Object.fromEntries(labelItems(card.listItems()).map((i) => [i.id, i.label]));
+  assert.deepEqual(first.map((i) => labels[i.id]), ['Moonstone ring (1 of 3)', 'Moonstone ring (2 of 3)', 'Moonstone ring (3 of 3)']);
+  assert.deepEqual(later.map((i) => labels[i.id]), ['Moonstone ring (1 of 2)', 'Moonstone ring (2 of 2)']);
+  assert.equal(labels[single.id], 'Moonstone ring');
+  card.finishItems([first[0].id]); // numbering doesn't shift when one is finished
+  const after = Object.fromEntries(labelItems(card.listItems()).map((i) => [i.id, i.label]));
+  assert.equal(after[first[1].id], 'Moonstone ring (2 of 3)');
 });
 
 test('names sort the way people count', () => {
@@ -167,7 +184,7 @@ test('files written by the earlier Python version still load', () => {
     finished_at: null, split_from: null, time_entries: [], total_seconds: 0, seconds_per_piece: 0 };
   fs.writeFileSync(path.join(dir, 'items', 'cuff-0a1b2c3d.json'), JSON.stringify(old));
   const [cuff] = card.listItems();
-  assert.deepEqual([cuff.name, cuff.type, cuff.photo], ['Cuff', 'other', null]);
+  assert.deepEqual([cuff.name, cuff.type, cuff.photo, cuff.batch_id], ['Cuff', 'other', null, null]);
 });
 
 test('CSV export', () => {
@@ -177,10 +194,10 @@ test('CSV export', () => {
   const out = path.join(dir, 'out.csv');
   assert.equal(card.exportCsv(out), 2);
   const [header, row, overhead] = fs.readFileSync(out, 'utf8').trim().split('\r\n');
-  assert.ok(header.startsWith('item_id,name,sku,type,photo,quantity,status'));
-  assert.ok(row.includes('"Hoops, ""large""",H-1,earrings,,2,in_progress'));
+  assert.ok(header.startsWith('item_id,name,sku,type,photo,batch_id,quantity,status'));
+  assert.ok(row.includes('"Hoops, ""large""",H-1,earrings,,,2,in_progress'));
   assert.ok(row.includes(',1.5,90,45,1,'));
-  assert.ok(overhead.startsWith('time-overhead,TimeOverhead,,overhead,,1,overhead'));
+  assert.ok(overhead.startsWith('time-overhead,TimeOverhead,,overhead,,,1,overhead'));
 });
 
 test('timestamps carry the local UTC offset', () => {

@@ -39,6 +39,14 @@ app.on('browser-window-created', (event, win) => {
       const loaded = await run("const i = document.querySelector('#bench .tile.photo img'); await i.decode(); return i.naturalWidth");
       assert.equal(loaded, 120, 'photo is served to the page');
 
+      // the same design added again later is its own group, and Finish works from the line
+      await run("await api('addItem', { name: 'Signet ring', type: 'ring', quantity: 2, separate: true })");
+      assert.equal(await run("return document.querySelectorAll('#bench .row.group').length"), 2, 'a later batch is a separate group');
+      await run("document.querySelectorAll('#bench .row.group')[1].querySelector('[data-act=group-finish]').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.equal(await run("return document.querySelectorAll('#bench .row.group').length"), 1);
+      assert.equal(await run("return state.items.filter((i) => i.status === 'finished').length"), 2);
+      assert.equal(await run("return !!document.querySelector('#bench .row:not(.group) [data-act=finish]')"), true, 'single lines have a Finish button');
+
       await run("await api('clockIn'); await openClockOut();");
       assert.equal(await run("return document.querySelectorAll('#allocRows [data-child-of]:not([hidden])').length"), 0, 'group starts closed');
       await run(`const g = document.querySelector('input[data-group]'); g.value = 50; g.dispatchEvent(new Event('input', { bubbles: true }));
@@ -54,7 +62,10 @@ app.on('browser-window-created', (event, win) => {
       const items = fs.readdirSync(path.join(dataDir, 'items')).map((f) => JSON.parse(fs.readFileSync(path.join(dataDir, 'items', f))));
       const byName = (n) => items.filter((i) => i.name === n);
       const near = (a, b) => assert.ok(Math.abs(a - b) <= 90, `${a} is not about ${b}`); // the time field only holds minutes
-      byName('Signet ring').forEach((ring) => { near(ring.total_seconds, 1800); assert.equal(ring.photo, photo); });
+      const firstBatch = byName('Signet ring').filter((ring) => ring.photo === photo);
+      assert.equal(firstBatch.length, 2);
+      firstBatch.forEach((ring) => near(ring.total_seconds, 1800));
+      byName('Signet ring').filter((ring) => !ring.photo).forEach((ring) => assert.equal(ring.total_seconds, 0)); // the later batch
       near(byName('TimeOverhead')[0].total_seconds, 3600);
       assert.equal(byName('Hoops')[0].total_seconds, 0);
       assert.equal(fs.existsSync(path.join(dataDir, 'current_session.json')), false);

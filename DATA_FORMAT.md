@@ -38,7 +38,8 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 | `sku` | string | Optional, may be empty. |
 | `type` | string | `earrings`, `ring`, `pendant`, `chain`, `bracelet`, `cuff`, `brooch`, `custom`, `other`; `overhead` for TimeOverhead. Missing in files from before types existed: treat as `other`. |
 | `photo` | string or null | File name inside `photos/`, shown instead of the type's icon. May be missing: treat as null. |
-| `quantity` | int | Normally 1: several of one design are separate items sharing a `name`, which the app shows as one group. More than 1 means a single entry standing for a whole batch (older files; still read). |
+| `batch_id` | string or null | Shared by pieces added together ("3 moonstone rings"); the app shows them as one group. The same design added again later gets a new `batch_id`. Null for a piece added on its own. May be missing: treat as null. |
+| `quantity` | int | Normally 1: several of one design are separate items sharing a `batch_id`. More than 1 means a single entry standing for a whole batch (older files; still read). |
 | `status` | string | `not_started`, `in_progress`, `finished`; `overhead` for TimeOverhead. |
 | `notes` | string | Free text, may be empty. |
 | `created_at` | timestamp | |
@@ -66,7 +67,7 @@ given to a piece appears as the `time-overhead` entry.
 
 One row per item, `\r\n` line endings, RFC 4180 quoting. Columns:
 
-`item_id, name, sku, type, photo, quantity, status, created_at, started_at, finished_at,
+`item_id, name, sku, type, photo, batch_id, quantity, status, created_at, started_at, finished_at,
 total_hours, total_minutes, minutes_per_piece, work_sessions, notes`
 
 "Export everything" ends with the TimeOverhead row (`status` = `overhead`).
