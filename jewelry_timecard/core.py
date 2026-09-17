@@ -7,6 +7,10 @@ back up, and hand to other tools:
         items/<item-id>.json      one file per piece (or batch of pieces)
         sessions/<session>.json   one file per completed clock-in/clock-out
         current_session.json      present only while clocked in
+
+One item is special: TimeOverhead (items/time-overhead.json). It always exists
+and collects whatever part of a session wasn't given to a piece - ordering,
+photographing, cleaning up, anything besides making.
 """
 
 from __future__ import annotations
@@ -26,7 +30,12 @@ SCHEMA_VERSION = 1
 NOT_STARTED = "not_started"
 IN_PROGRESS = "in_progress"
 FINISHED = "finished"
-STATUS_LABELS = {NOT_STARTED: "Getting started", IN_PROGRESS: "In progress", FINISHED: "Finished"}
+OVERHEAD = "overhead"
+STATUS_LABELS = {NOT_STARTED: "Getting started", IN_PROGRESS: "In progress", FINISHED: "Finished",
+                 OVERHEAD: "Overhead"}
+
+OVERHEAD_ID = "time-overhead"
+OVERHEAD_NAME = "TimeOverhead"
 
 PERCENT_TOLERANCE = 0.01
 
@@ -94,6 +103,19 @@ def _refresh_totals(item: dict) -> None:
     item["seconds_per_piece"] = round(total / item["quantity"], 1) if item["quantity"] else 0.0
 
 
+def label_items(items: list[dict]) -> list[dict]:
+    """Give every item a display `label`. Separate pieces that share a name get
+    "(1 of 3)" style labels so they can be told apart in the queue and at clock-out."""
+    by_name: dict[str, list[dict]] = {}
+    for item in items:
+        by_name.setdefault(item["name"].lower(), []).append(item)
+    for group in by_name.values():
+        group.sort(key=lambda i: i.get("sequence", 0))
+        for index, item in enumerate(group, start=1):
+            item["label"] = item["name"] if len(group) == 1 else f"{item['name']} ({index} of {len(group)})"
+    return items
+
+
 class TimeCard:
     def __init__(self, data_dir: Path | str | None = None):
         self.data_dir = Path(data_dir) if data_dir else default_data_dir()
@@ -102,6 +124,7 @@ class TimeCard:
         self.session_file = self.data_dir / "current_session.json"
         self.items_dir.mkdir(parents=True, exist_ok=True)
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        self.overhead_item()
 
     # ----- items -------------------------------------------------------
 
@@ -118,8 +141,26 @@ class TimeCard:
             raise TimeCardError(f"No piece with id {item_id}")
         return _read_json(path)
 
+    def _get_piece(self, item_id: str) -> dict:
+        if item_id == OVERHEAD_ID:
+            raise TimeCardError(f"{OVERHEAD_NAME} is always there - it can't be finished, renamed or deleted.")
+        return self.get_item(item_id)
+
+    def overhead_item(self) -> dict:
+        """The catch-all for time not spent making. Created the first time it is needed."""
+        if not self._item_path(OVERHEAD_ID).exists():
+            self.save_item({
+                "schema_version": SCHEMA_VERSION, "id": OVERHEAD_ID, "sequence": 0, "name": OVERHEAD_NAME,
+                "sku": "", "quantity": 1, "status": OVERHEAD,
+                "notes": "Time clocked in but not spent on a piece.",
+                "created_at": to_iso(now()), "started_at": None, "finished_at": None,
+                "split_from": None, "time_entries": [],
+            })
+        return self.get_item(OVERHEAD_ID)
+
     def list_items(self, include_finished: bool = True) -> list[dict]:
-        items = [_read_json(p) for p in self.items_dir.glob("*.json")]
+        """Every piece and batch. TimeOverhead isn't a piece; see overhead_item()."""
+        items = [_read_json(p) for p in self.items_dir.glob("*.json") if p.stem != OVERHEAD_ID]
         if not include_finished:
             items = [i for i in items if i["status"] != FINISHED]
         items.sort(key=lambda i: (i["status"] == FINISHED, i["name"].lower(), i.get("sequence", 0)))
@@ -161,7 +202,7 @@ class TimeCard:
 
     def update_item(self, item_id: str, *, name: str | None = None, sku: str | None = None,
                     notes: str | None = None) -> dict:
-        item = self.get_item(item_id)
+        item = self._get_piece(item_id)
         if name is not None:
             if not name.strip():
                 raise TimeCardError("A piece needs a name.")
@@ -174,12 +215,13 @@ class TimeCard:
         return item
 
     def delete_item(self, item_id: str) -> None:
+        self._get_piece(item_id)
         self._item_path(item_id).unlink(missing_ok=True)
 
     def finish_items(self, item_ids: list[str], when: datetime | None = None) -> None:
         stamp = to_iso(when or now())
         for item_id in item_ids:
-            item = self.get_item(item_id)
+            item = self._get_piece(item_id)
             if item["status"] != FINISHED:
                 item["status"] = FINISHED
                 item["finished_at"] = stamp
@@ -188,7 +230,7 @@ class TimeCard:
     def finish_part_of_batch(self, item_id: str, count: int, when: datetime | None = None) -> dict:
         """Mark `count` pieces of a batch finished. They are split into their own
         finished item carrying their share of the time logged so far."""
-        item = self.get_item(item_id)
+        item = self._get_piece(item_id)
         if item["status"] == FINISHED:
             raise TimeCardError("That batch is already finished.")
         if count < 1 or count > item["quantity"]:
@@ -216,7 +258,7 @@ class TimeCard:
         return finished
 
     def reopen_item(self, item_id: str) -> None:
-        item = self.get_item(item_id)
+        item = self._get_piece(item_id)
         item["status"] = IN_PROGRESS if item["time_entries"] else NOT_STARTED
         item["finished_at"] = None
         self.save_item(item)
@@ -253,8 +295,8 @@ class TimeCard:
     def clock_out(self, allocations: dict[str, float], when: datetime | None = None) -> dict:
         """Close the session, splitting its length across pieces.
 
-        `allocations` maps item id -> percent of the session. Percentages must
-        add up to 100 unless there is nothing to assign time to.
+        `allocations` maps item id -> percent of the session. Whatever is left
+        over, up to the full 100%, goes to TimeOverhead.
         """
         session = self.current_session()
         if not session:
@@ -268,9 +310,12 @@ class TimeCard:
         if any(v < 0 for v in allocations.values()):
             raise TimeCardError("Percentages can't be negative.")
         total_pct = sum(allocations.values())
-        if allocations or self.clock_out_candidates():
-            if abs(total_pct - 100) > PERCENT_TOLERANCE:
-                raise TimeCardError(f"Percentages add up to {total_pct:g}%, they need to total 100%.")
+        if total_pct > 100 + PERCENT_TOLERANCE:
+            raise TimeCardError(f"Percentages add up to {total_pct:g}%, which is more than the whole session.")
+        overhead_pct = round(allocations.pop(OVERHEAD_ID, 0) + max(100 - total_pct, 0), 2)
+        if overhead_pct >= PERCENT_TOLERANCE:
+            self.overhead_item()
+            allocations[OVERHEAD_ID] = overhead_pct
 
         items = {item_id: self.get_item(item_id) for item_id in allocations}
         duration = (end - start).total_seconds()
@@ -312,7 +357,8 @@ class TimeCard:
     ]
 
     def export_csv(self, path: Path | str, items: list[dict] | None = None) -> int:
-        items = self.list_items() if items is None else items
+        """Write `items` as CSV; by default every piece followed by TimeOverhead."""
+        items = self.list_items() + [self.overhead_item()] if items is None else items
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=self.CSV_FIELDS)
             writer.writeheader()

@@ -1,22 +1,20 @@
 # Jewelry Time Card
 
 A time card for jewelry artists. Clock in, work, clock out, and say what share of
-the session went to each piece. Runs on Linux, Windows and macOS.
+the session went to each piece. A desktop app for Linux, Windows and macOS.
 
 ## Running it
 
-Needs Python 3.9 or newer — nothing else to install.
+Needs Python 3.9 or newer with Tk — nothing else to install.
 
-| System  | How to start                                   |
-|---------|------------------------------------------------|
-| Windows | double-click `Start Time Card.bat`             |
-| macOS   | double-click `Start Time Card.command`         |
-| Linux   | `./start-timecard.sh` (or `python3 run.py`)    |
+| System  | How to start                                | Tk                                   |
+|---------|---------------------------------------------|--------------------------------------|
+| Windows | double-click `Start Time Card.bat`          | included with Python from python.org |
+| macOS   | double-click `Start Time Card.command`      | included with Python from python.org |
+| Linux   | `./start-timecard.sh` (or `python3 run.py`) | `sudo apt install python3-tk`        |
 
-It opens in your web browser at `http://127.0.0.1:8765`. It only listens on your
-own computer; nothing goes over the network. Leave the launcher window open while
-you work. Closing the browser tab does not clock you out — the session is kept on
-disk, so it survives a restart.
+Closing the window does not clock you out — the session is kept on disk, so it
+survives a restart.
 
 To make a standalone app that doesn't need Python: `pip install pyinstaller`,
 then `python build_app.py` on each operating system you want an app for.
@@ -30,12 +28,16 @@ then `python build_app.py` on each operating system you want an app for.
     timed on its own.
 - **Clock out** asks what percent of the session went to each piece. Pieces with
   the same name get an "All 3 × …" row that splits one number evenly across them.
-  *Split evenly* and *Spread the rest* fill in the arithmetic. The total must be 100%.
-  The clock-out time can be changed if you forgot to clock out.
-- **Mark finished** at any time by ticking pieces, clocked in or not. A piece
+  *Split evenly* and *Spread the rest* fill in the arithmetic. The clock-out time
+  can be changed if you forgot to clock out.
+- **TimeOverhead** is always there. The percentages don't have to reach 100%:
+  whatever isn't given to a piece goes to TimeOverhead, the catch-all for
+  everything besides making (ordering, photos, cleaning up). It can't be finished,
+  renamed or deleted, and it has its own time log like any piece.
+- **Mark finished** at any time by selecting pieces, clocked in or not. A piece
   finished mid-session still appears at clock-out so its last stretch is counted.
-  *Finish some* marks part of a batch finished; those pieces take their even share
-  of the time logged so far.
+  *Finish some of a batch* marks part of a batch finished; those pieces take their
+  even share of the time logged so far. Finished pieces can be reopened.
 
 ## Where the data lives
 
@@ -51,13 +53,16 @@ such as a synced folder.
 - `items/<id>.json` — one file per piece or batch: name, SKU, quantity, status,
   `total_seconds`, `seconds_per_piece`, and a `time_entries` list with one record
   per work session (clock in/out, percent, seconds).
+- `items/time-overhead.json` — the same, for TimeOverhead.
 - `sessions/*.json` — one file per clock-in/clock-out with how it was split.
-- `exports/` — a copy of every CSV exported from the app.
 
-CSV export is in the app (finished pieces or everything), or from the command line:
-`python3 run.py --export pieces.csv`. The item JSON files are the intended hand-off
-point for Superfy; that export is not built yet.
+CSV export is on the Finished tab (finished pieces, or everything including
+TimeOverhead), or from the command line: `python3 run.py --export pieces.csv`.
+The item JSON files are the intended hand-off point for Superfy; that export is
+not built yet.
 
-## Tests
+## Code
 
-    python3 -m unittest discover -s tests
+- `jewelry_timecard/core.py` — all the time keeping and the JSON files. No interface.
+- `jewelry_timecard/tk_app.py` — the window.
+- `tests/` — `python3 -m unittest discover -s tests` (the window tests need a display).
