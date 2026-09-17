@@ -44,6 +44,7 @@ const ICONS = {
     '<path d="M12 7v5l3.2 2"/>',
   // interface glyphs
   plus: '<path d="M12 5v14M5 12h14"/>',
+  chevron: '<path d="m9 5 7 7-7 7"/>',
   camera:
     '<path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>' +
     '<circle cx="12" cy="13" r="3.5"/>',

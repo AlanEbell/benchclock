@@ -38,7 +38,7 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 | `sku` | string | Optional, may be empty. |
 | `type` | string | `earrings`, `ring`, `pendant`, `chain`, `bracelet`, `cuff`, `brooch`, `custom`, `other`; `overhead` for TimeOverhead. Missing in files from before types existed: treat as `other`. |
 | `photo` | string or null | File name inside `photos/`, shown instead of the type's icon. May be missing: treat as null. |
-| `quantity` | int | 1 for a single piece; more for a batch made together. |
+| `quantity` | int | Normally 1: several of one design are separate items sharing a `name`, which the app shows as one group. More than 1 means a single entry standing for a whole batch (older files; still read). |
 | `status` | string | `not_started`, `in_progress`, `finished`; `overhead` for TimeOverhead. |
 | `notes` | string | Free text, may be empty. |
 | `created_at` | timestamp | |

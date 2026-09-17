@@ -7,18 +7,18 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
 
 - **Clock in / Clock out** - one big button. Closing the window does not clock you out.
 - **Add a piece** - a name, a tap on what it is (earrings, ring, pendant...), done.
-  Making several? Choose *one batch made together* (`Hoop earrings x6`, time shared
-  evenly) or *separate pieces* (`Moonstone ring (1 of 3)`..., each timed on its own).
+- **Making several?** Set *How many*. They are listed as one line (`Moonstone ring x3`)
+  with a `>` mark. Closed, it works as a batch: one number at clock-out is divided
+  evenly among them. Open it to time, finish or edit one on its own.
 - **Photos** - add a photo to a piece and it is shown instead of the icon. Every photo
   you add stays in your library as a choice for later pieces. JPEG and PNG; drop a
   picture onto the dialog or use *Add...*.
-- **Clocking out** - type a percentage next to the pieces you worked on. Same-named
-  pieces get an *All 3 x ...* row that splits one number between them. *Split evenly*
+- **Clocking out** - type a percentage next to the pieces you worked on. *Split evenly*
   and *Spread the rest* do the arithmetic. You can correct the clock-out time if you
   forgot to clock out.
 - **TimeOverhead** - always there. Whatever part of a session you don't give to a
   piece goes to it: ordering, photographing, cleaning up, anything besides making.
-- **Mark finished** - tick pieces at any time. *Finish some* finishes part of a batch.
+- **Mark finished** - tick pieces at any time. *Finish some* finishes part of a group.
   Finished pieces can be reopened.
 - **Export** - CSV of finished pieces, or of everything including TimeOverhead.
 

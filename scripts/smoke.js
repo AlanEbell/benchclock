@@ -29,15 +29,26 @@ app.on('browser-window-created', (event, win) => {
       await run(`await api('addItem', { name: 'Signet ring', type: 'ring', photo: ${JSON.stringify(photo)}, quantity: 2, separate: true });
                  await api('addItem', { name: 'Hoops', type: 'earrings', quantity: 6 });`);
       const rows = await run("return [...document.querySelectorAll('#bench .row b')].map((b) => b.textContent)");
-      assert.deepEqual(rows, ['Hoops', 'Signet ring (1 of 2)', 'Signet ring (2 of 2)']);
-      assert.equal(await run("return document.querySelectorAll('#bench .tile.photo img').length"), 2);
+      assert.deepEqual(rows, ['Hoops', 'Signet ring'], 'same-named pieces are one closed line');
+      await run("document.querySelector('#bench .row.group .toggle').click()");
+      const opened = await run("return [...document.querySelectorAll('#bench .row b')].map((b) => b.textContent)");
+      assert.deepEqual(opened, ['Hoops', 'Signet ring', 'Signet ring (1 of 2)', 'Signet ring (2 of 2)']);
+      await run("document.querySelector('#bench .row.group input[type=checkbox]').click()");
+      assert.equal(await run("return selected.size"), 2, 'ticking the group ticks every piece in it');
+      await run("document.querySelector('#bench .row.group input[type=checkbox]').click()");
       const loaded = await run("const i = document.querySelector('#bench .tile.photo img'); await i.decode(); return i.naturalWidth");
       assert.equal(loaded, 120, 'photo is served to the page');
 
       await run("await api('clockIn'); await openClockOut();");
+      assert.equal(await run("return document.querySelectorAll('#allocRows [data-child-of]:not([hidden])').length"), 0, 'group starts closed');
       await run(`const g = document.querySelector('input[data-group]'); g.value = 50; g.dispatchEvent(new Event('input', { bubbles: true }));
                  $('outWhen').value = localInput(new Date(Date.now() + 2 * 3600e3)); $('outWhen').oninput();`);
       assert.match(await run("return $('allocTotal').textContent"), /Pieces 50%\s+\+\s+TimeOverhead 50%/);
+      // opened, one piece can be changed on its own and the group's box follows
+      await run(`document.querySelector('#allocRows [data-toggle]').click();
+                 const one = itemInputs()[1]; one.value = 35; one.dispatchEvent(new Event('input', { bubbles: true }));`);
+      assert.equal(await run("return document.querySelector('input[data-group]').value"), '60');
+      await run("const one = itemInputs()[1]; one.value = 25; one.dispatchEvent(new Event('input', { bubbles: true }));");
       await run("$('outConfirm').click(); await new Promise((r) => setTimeout(r, 400));");
 
       const items = fs.readdirSync(path.join(dataDir, 'items')).map((f) => JSON.parse(fs.readFileSync(path.join(dataDir, 'items', f))));
