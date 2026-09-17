@@ -137,7 +137,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1000, height: 860, minWidth: 640, minHeight: 520, show: false,
     title: 'BenchClock', backgroundColor: '#f5f1e8', autoHideMenuBar: true,
-    icon: path.join(__dirname, '..', 'renderer', 'icon.png'),
+    // read through fs so it also works from inside the packaged app archive
+    icon: nativeImage.createFromBuffer(fs.readFileSync(path.join(__dirname, '..', 'renderer', 'icon.png'))),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false,
     },

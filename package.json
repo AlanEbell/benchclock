@@ -1,7 +1,7 @@
 {
   "name": "benchclock",
   "productName": "BenchClock",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "BenchClock, a time card for jewelry artists: clock in and out, and split each session across the pieces on the bench.",
   "author": "AlanEbell <13323211+AlanEbell@users.noreply.github.com>",
   "license": "UNLICENSED",
@@ -27,8 +27,13 @@
         "deb"
       ],
       "category": "Office",
-      "icon": "build/icon.png",
-      "synopsis": "Time card for jewelry artists"
+      "icon": "build/icons",
+      "synopsis": "Time card for jewelry artists",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "benchclock"
+        }
+      }
     },
     "win": {
       "target": [
@@ -47,5 +52,6 @@
     "electron": "^44.4.1",
     "electron-builder": "^26.15.3"
   },
-  "homepage": "https://github.com/AlanEbell/benchclock"
+  "homepage": "https://github.com/AlanEbell/benchclock",
+  "desktopName": "benchclock.desktop"
 }
