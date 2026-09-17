@@ -22,6 +22,9 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
 - **Finishing** - press *Finish* on a line (*Finish all* / *Finish some* on a group), or tick
   several and press *Mark finished*.
   Finished pieces can be reopened.
+- **Time report (PDF)** - every piece, on the bench and finished, with the time spent on it,
+  batches totalled with each piece listed beneath, plus how much of your clocked time
+  went to making and how much to TimeOverhead. Opens as soon as it is saved.
 - **Export** - CSV of finished pieces, or of everything including TimeOverhead.
 
 All data is plain files on your own computer; see [DATA_FORMAT.md](DATA_FORMAT.md).
@@ -37,7 +40,8 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
     npm run dist              # build installers for this operating system into dist/
 
 - `src/core/timecard.js` - all time keeping and file handling. No interface.
-- `src/main/` - the Electron main process: window, file dialogs, photo import.
+- `src/main/` - the Electron main process: window, file dialogs, photo import, and the
+  PDF report (`report.js` lays it out).
 - `src/renderer/` - the window itself: HTML, CSS, and the icon set in `icons.js`.
 - `build/icon.svg` - the app icon; `npm run icon` renders it to PNG.
 

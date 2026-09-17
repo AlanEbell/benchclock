@@ -1,11 +1,13 @@
 'use strict';
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, protocol, shell } = require('electron');
 
 const {
   TimeCard, TimeCardError, labelItems, toIso, FINISHED, PIECE_TYPES,
 } = require('../core/timecard.js');
+const { buildReportHtml } = require('./report.js');
 
 const PHOTO_SIZE = 512; // library photos are square and small: they are icons, not an archive
 const PHOTO_NAME = /^[0-9a-f]{16}\.jpg$/;
@@ -46,6 +48,31 @@ function importPhoto(file) {
   return card.addPhoto(small.toJPEG(88));
 }
 
+/** Lay the report out in a hidden window and print that to a PDF file. */
+async function writeReportPdf(file) {
+  const html = buildReportHtml({
+    items: labelItems(card.listItems()), overhead: card.overheadItem(), types: PIECE_TYPES, photosDir: card.photosDir,
+  });
+  const page = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'benchclock-report-')), 'report.html');
+  fs.writeFileSync(page, html, 'utf8');
+  const printer = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
+  try {
+    await printer.loadFile(page);
+    const letter = ['US', 'CA', 'MX'].includes(app.getLocaleCountryCode());
+    const small = 'font-size:8px; color:#776d62; width:100%; padding:0 14mm;';
+    fs.writeFileSync(file, await printer.webContents.printToPDF({
+      pageSize: letter ? 'Letter' : 'A4', printBackground: true,
+      margins: { top: 0.6, bottom: 0.7, left: 0.55, right: 0.55 }, // inches
+      displayHeaderFooter: true, headerTemplate: '<span></span>',
+      footerTemplate: `<div style="${small} display:flex; justify-content:space-between;"><span>BenchClock time report</span>` +
+        '<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>',
+    }));
+  } finally {
+    printer.destroy();
+    fs.rmSync(path.dirname(page), { recursive: true, force: true });
+  }
+}
+
 const api = {
   state: () => null,
   clockIn: () => card.clockIn(),
@@ -77,6 +104,18 @@ const api = {
     if (picked.canceled) return { file: null };
     const items = scope === 'finished' ? card.listItems().filter((i) => i.status === FINISHED) : undefined;
     return { file: picked.filePath, count: card.exportCsv(picked.filePath, items) };
+  },
+
+  async exportReport() {
+    const stamp = toIso(new Date()).slice(0, 10);
+    const picked = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save time report', defaultPath: path.join(app.getPath('documents'), `BenchClock report ${stamp}.pdf`),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (picked.canceled) return { file: null };
+    await writeReportPdf(picked.filePath);
+    shell.openPath(picked.filePath); // show it straight away in the computer's PDF viewer
+    return { file: picked.filePath };
   },
 
   openDataFolder: () => { shell.openPath(card.dataDir); },
@@ -136,3 +175,5 @@ if (!app.requestSingleInstanceLock()) {
   // Closing the window doesn't clock anyone out: the session lives on disk.
   app.on('window-all-closed', () => app.quit());
 }
+
+module.exports = { writeReportPdf }; // for scripts/smoke.js

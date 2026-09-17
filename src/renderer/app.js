@@ -248,6 +248,13 @@ $('finishBtn').onclick = async () => {
 };
 $('toggleFin').onclick = () => { showFinished = !showFinished; render(); };
 $('dataDir').onclick = () => api('openDataFolder');
+$('reportBtn').onclick = async () => {
+  $('reportBtn').disabled = true;
+  try {
+    const result = await api('exportReport');
+    if (result.file) toast(`Saved the report to ${result.file}`);
+  } finally { $('reportBtn').disabled = false; }
+};
 for (const [button, scope] of [['expFin', 'finished'], ['expAll', 'all']]) {
   $(button).onclick = async () => {
     const result = await api('exportCsv', { scope });

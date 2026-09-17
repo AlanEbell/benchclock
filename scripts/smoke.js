@@ -70,6 +70,12 @@ app.on('browser-window-created', (event, win) => {
       assert.equal(byName('Hoops')[0].total_seconds, 0);
       assert.equal(fs.existsSync(path.join(dataDir, 'current_session.json')), false);
       assert.equal(await run("return $('clockBtn').textContent"), 'Clock in');
+      const pdf = path.join(dataDir, 'report.pdf');
+      await writeReportPdf(pdf);
+      const bytes = fs.readFileSync(pdf);
+      assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+      assert.ok(bytes.length > 5000, 'the PDF has content');
+      assert.equal(await run("return !!document.getElementById('reportBtn')"), true);
       console.log('SMOKE OK');
     } catch (error) {
       console.error('SMOKE FAILED\n', error);
@@ -78,4 +84,4 @@ app.on('browser-window-created', (event, win) => {
     app.quit();
   });
 });
-require('../src/main/main.js');
+const { writeReportPdf } = require('../src/main/main.js');
