@@ -276,6 +276,7 @@ function openPieceDialog(item, group) {
   $('pieceTitle').textContent = group ? `Edit all ${group.length} \u00d7 ${item.name}` : item ? 'Edit piece' : 'Add a piece';
   $('pieceSave').textContent = item ? 'Save' : 'Add';
   $('pieceDelete').hidden = !item || !!group;
+  $('pieceAdjust').hidden = !item;
   $('qtyBlock').hidden = !!item;
   $('pName').value = item ? item.name : '';
   $('pSku').value = item ? item.sku : '';
@@ -347,6 +348,7 @@ $('pieceForm').addEventListener('submit', async (ev) => {
   $('pieceDlg').close();
 });
 
+$('pieceAdjust').onclick = () => { const ids = draft.ids; $('pieceDlg').close(); openAdjust(ids); };
 $('pieceDelete').onclick = async () => {
   const item = findItem(draft.ids[0]);
   const text = `Its ${fmtDur(item.total_seconds)} of logged time goes with it. This can't be undone.`;
@@ -386,14 +388,101 @@ $('partForm').addEventListener('submit', async (ev) => {
 function openLog(item) {
   const each = item.quantity > 1 ? ` (${fmtDur(item.seconds_per_piece)} each)` : '';
   $('logTitle').textContent = `${item.label || item.name}: ${fmtDur(item.total_seconds)}${each}`;
-  const rows = item.time_entries.map((e) => `<tr><td>${fmtWhen(e.clock_in)}</td><td>${fmtWhen(e.clock_out)}</td>
-    <td>${e.percent}%</td><td>${fmtDur(e.seconds)}</td></tr>`).join('');
+  const rows = item.time_entries.map((e) => (e.kind === 'adjustment' ?
+    `<tr class="adj"><td>${fmtDay(e.clock_in)}</td><td colspan="2">Adjustment${e.note ? `: ${esc(e.note)}` : ''}</td>
+    <td>${e.seconds < 0 ? '\u2212' : '+'}${fmtDur(Math.abs(e.seconds))}</td></tr>` :
+    `<tr><td>${fmtWhen(e.clock_in)}</td><td>${fmtWhen(e.clock_out)}</td><td>${e.percent}%</td><td>${fmtDur(e.seconds)}</td></tr>`)).join('');
   $('logBody').innerHTML = (rows ? `<table class="log"><tr><th>Clocked in</th><th>Clocked out</th><th>Share of session</th>
     <th>Time</th></tr>${rows}</table>` : '<p class="hint">No time logged yet.</p>') +
     `<div class="file">File: ${esc(state.dataDir)}/items/${esc(item.id)}.json</div>`;
+  $('logDlg').dataset.id = item.id;
   $('logDlg').showModal();
 }
 $('logClose').onclick = () => $('logDlg').close();
+$('logAdjust').onclick = () => { const id = $('logDlg').dataset.id; $('logDlg').close(); openAdjust([id]); };
+
+// ---- adjusting time ----------------------------------------------------
+
+/** The box for putting time on pieces by hand. `ids` are ticked to start with; else whatever is ticked on the lists. */
+function openAdjust(ids) {
+  const ticked = new Set(ids || selected);
+  const line = (item, extra = '') => `<label class="choice ${extra}"><input type="checkbox" data-id="${esc(item.id)}" ${ticked.has(item.id) ? 'checked' : ''}>
+    ${tile(item, 'small')}<span class="who">${esc(item.label || item.name)}</span><span class="have">${fmtDur(item.total_seconds)}</span></label>`;
+  const bench = state.items.filter((i) => i.status !== 'finished');
+  const done = state.items.filter((i) => i.status === 'finished');
+  $('adjustRows').innerHTML = [
+    bench.length && `<div class="group-title">On the bench</div>${bench.map((i) => line(i)).join('')}`,
+    done.length && `<div class="group-title">Finished</div>${done.map((i) => line(i, 'finished')).join('')}`,
+    `<div class="group-title">Everything else</div>${line(state.overhead)}`,
+  ].filter(Boolean).join('');
+  $('adjustRows').querySelector('.choice:last-child .tile').classList.add('grey');
+  $('adjHours').value = 0;
+  $('adjMins').value = 30;
+  $('adjNote').value = '';
+  $('adjWhen').value = dayStr(new Date(Date.now() + clockSkew));
+  $('adjWhen').max = $('adjWhen').value;
+  document.querySelector('input[name=adjDir][value=add]').checked = true;
+  document.querySelector('input[name=adjShare][value=each]').checked = true;
+  updateAdjust();
+  $('adjustDlg').showModal();
+  (ticked.size ? $('adjMins') : $('adjustRows').querySelector('input')).focus();
+  if (ticked.size) $('adjMins').select();
+}
+
+/** What the box would do: { ids, minutes (signed), split }, and whether it can be done. */
+function adjustChoice() {
+  const ids = [...document.querySelectorAll('#adjustRows input:checked')].map((box) => box.dataset.id);
+  const hours = Math.max(0, Math.floor(Number($('adjHours').value) || 0));
+  const mins = Math.max(0, Math.floor(Number($('adjMins').value) || 0));
+  const off = document.querySelector('input[name=adjDir]:checked').value === 'off';
+  const split = ids.length > 1 && document.querySelector('input[name=adjShare]:checked').value === 'split';
+  return { ids, minutes: (off ? -1 : 1) * (hours * 60 + mins), split };
+}
+
+function updateAdjust() {
+  const { ids, minutes, split } = adjustChoice();
+  $('adjShare').hidden = ids.length < 2;
+  const each = split ? minutes / ids.length : minutes;
+  const items = ids.map(findItem);
+  const short = items.filter((i) => i.total_seconds + each * 60 < -0.05);
+  const amount = fmtDur(Math.abs(each) * 60);
+  let text;
+  if (!ids.length) text = 'Tick the pieces to adjust.';
+  else if (!minutes) text = 'How much time? Hours, minutes or both.';
+  else if (short.length) {
+    text = short.length === 1 ?
+      `${short[0].label || short[0].name} only has ${fmtDur(short[0].total_seconds)} on it, so ${amount} can't come off.` :
+      `${amount} can't come off ${short.map((i) => `${i.label || i.name} (${fmtDur(i.total_seconds)})`).join(', ')}: not enough time on them.`;
+  } else if (ids.length === 1) {
+    const [item] = items;
+    text = `${item.label || item.name}: ${fmtDur(item.total_seconds)} \u2192 ${fmtDur(item.total_seconds + minutes * 60)}.`;
+  } else {
+    text = minutes > 0 ?
+      (split ? `Shares ${fmtDur(minutes * 60)} between ${pieces(ids.length)}: ${amount} each.` : `Adds ${amount} to each of ${pieces(ids.length)}.`) :
+      (split ? `Takes ${fmtDur(-minutes * 60)} off ${pieces(ids.length)} between them: ${amount} each.` : `Takes ${amount} off each of ${pieces(ids.length)}.`);
+  }
+  $('adjustSummary').textContent = text;
+  $('adjustSummary').classList.toggle('bad', short.length > 0);
+  $('adjustSave').disabled = !ids.length || !minutes || short.length > 0;
+}
+
+$('adjustDlg').addEventListener('input', updateAdjust);
+$('adjustDlg').addEventListener('change', updateAdjust);
+$('adjustCancel').onclick = () => $('adjustDlg').close();
+$('adjustForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const { ids, minutes, split } = adjustChoice();
+  if (!ids.length || !minutes) return;
+  // The day is what matters; the work is dated noon, or now if it was today.
+  const day = $('adjWhen').value || dayStr(new Date(Date.now() + clockSkew));
+  const today = day === dayStr(new Date(Date.now() + clockSkew));
+  const when = today ? localInput(new Date(Date.now() + clockSkew)) : `${day}T12:00`;
+  const done = await api('adjustTime', { ids, minutes, split, when, note: $('adjNote').value });
+  $('adjustDlg').close();
+  const amount = fmtDur(Math.abs(done.seconds));
+  const who = done.items.length === 1 ? (findItem(done.items[0].id) || done.items[0]).label || done.items[0].name : pieces(done.items.length);
+  toast(done.seconds > 0 ? `Added ${amount} to ${who}${done.items.length > 1 ? ' each' : ''}.` : `Took ${amount} off ${who}${done.items.length > 1 ? ' each' : ''}.`);
+});
 
 // ---- time report -------------------------------------------------------
 
@@ -513,7 +602,7 @@ $('aboutClose').onclick = () => $('aboutDlg').close();
 $('aboutHelp').onclick = () => { $('aboutDlg').close(); api('openHelp'); };
 $('aboutSite').onclick = () => api('openHomepage');
 
-const menuActions = { add: () => openPieceDialog(null), report: openReport, about: openAbout };
+const menuActions = { add: () => openPieceDialog(null), report: openReport, adjust: () => openAdjust(), about: openAbout };
 window.timecard.onMenu((action) => {
   if (document.querySelector('dialog[open]')) return; // one thing at a time
   menuActions[action]();

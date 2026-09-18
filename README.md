@@ -19,6 +19,10 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
   forgot to clock out.
 - **TimeOverhead** - always there. Whatever part of a session you don't give to a
   piece goes to it: ordering, photographing, cleaning up, anything besides making.
+- **Adjust time** - for work that was never clocked, or a share that came out wrong: *Edit >
+  Adjust time* (Ctrl+T) works on the ticked pieces; *Adjust time...* is also in a piece's *Log*
+  and *Edit* boxes. Add or take off hours and minutes, to each piece or shared between them,
+  dated to the day the work was done, with a reason. It shows in the log as an adjustment.
 - **Finishing** - press *Finish* on a line (*Finish all* / *Finish some* on a group), or tick
   several and press *Mark finished*.
   Finished pieces can be reopened.
@@ -53,7 +57,7 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
 
 Installers have to be built on the system they are for. GitHub does that for all three:
 `.github/workflows/build.yml` builds them when run from the Actions tab, and pushing a tag
-like `v0.2.0` also makes a Release with the installers attached.
+like `v1.0.0` also makes a Release with the installers attached.
 They are not signed with a paid certificate yet, so Windows and macOS show a warning the first
 time. (The Mac app carries a free "ad-hoc" signature, which Apple Silicon needs to start it at all.)
 

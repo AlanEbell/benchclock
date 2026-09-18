@@ -82,6 +82,7 @@
 
     <div class="actions">
       <button type="button" class="danger" id="pieceDelete" hidden>Delete piece</button>
+      <button type="button" class="quiet" id="pieceAdjust" hidden title="Add time that wasn't clocked, or take some off">Adjust time&hellip;</button>
       <span class="spacer"></span>
       <button type="button" id="pieceCancel">Cancel</button>
       <button type="submit" class="primary" id="pieceSave">Add</button>
@@ -133,7 +134,42 @@
 <dialog id="logDlg">
   <h2 id="logTitle"></h2>
   <div id="logBody"></div>
-  <div class="actions"><span class="spacer"></span><button type="button" id="logClose">Close</button></div>
+  <div class="actions">
+    <button type="button" id="logAdjust" title="Add time that wasn't clocked, or take some off">Adjust time&hellip;</button>
+    <span class="spacer"></span><button type="button" id="logClose">Close</button></div>
+</dialog>
+
+<dialog id="adjustDlg">
+  <form method="dialog" id="adjustForm" autocomplete="off">
+    <h2>Adjust time</h2>
+    <p class="hint">For work that was never clocked, or a share that came out wrong at clock-out. It is kept in the piece's log as an
+      adjustment, with the day and your reason, and counts in reports on that day.</p>
+    <div class="field-label">Which pieces?</div>
+    <div class="choose" id="adjustRows"></div>
+    <div class="field-label">How much?</div>
+    <div class="amount">
+      <div class="segmented" role="radiogroup" aria-label="Add or take off">
+        <label><input type="radio" name="adjDir" value="add" checked><span>Add</span></label>
+        <label><input type="radio" name="adjDir" value="off"><span>Take off</span></label>
+      </div>
+      <input type="number" id="adjHours" min="0" step="1" value="0" aria-label="Hours"><span class="unit">h</span>
+      <input type="number" id="adjMins" min="0" step="1" value="30" aria-label="Minutes"><span class="unit">min</span>
+      <div class="segmented" role="radiogroup" aria-label="To each piece or shared" id="adjShare" hidden>
+        <label><input type="radio" name="adjShare" value="each" checked><span>To each piece</span></label>
+        <label><input type="radio" name="adjShare" value="split"><span>Shared between them</span></label>
+      </div>
+    </div>
+    <div class="dates">
+      <div><label for="adjWhen">Day the work was done</label><input type="date" id="adjWhen"></div>
+      <div><label for="adjNote">Reason <span class="muted">- optional</span></label><input type="text" id="adjNote" placeholder="e.g. forgot to clock in on Tuesday"></div>
+    </div>
+    <p class="hint gap" id="adjustSummary"></p>
+    <div class="actions">
+      <span class="spacer"></span>
+      <button type="button" id="adjustCancel">Cancel</button>
+      <button type="submit" class="primary" id="adjustSave">Adjust</button>
+    </div>
+  </form>
 </dialog>
 
 <dialog id="reportDlg">

@@ -166,6 +166,61 @@ test('reopen, edit and delete', () => {
   assert.deepEqual(card.listItems(), []);
 });
 
+test('time can be added by hand, and taken off again', () => {
+  const [ring] = card.addItem({ name: 'Ring' });
+  const [pendant] = card.addItem({ name: 'Pendant' });
+  const day = new Date(2026, 8, 10, 12, 0);
+  const given = card.adjustTime({ ids: [ring.id], minutes: 90, when: day, note: ' Forgot to clock in ' });
+  assert.deepEqual([given.seconds, given.items[0].total_seconds], [5400, 5400]);
+  const after = card.getItem(ring.id);
+  assert.deepEqual([after.status, after.total_seconds, after.time_entries.length], [IN_PROGRESS, 5400, 1]);
+  assert.equal(after.started_at, after.time_entries[0].clock_in);
+  assert.equal(after.time_entries[0].clock_in.slice(0, 10), '2026-09-10');
+  assert.deepEqual([after.time_entries[0].kind, after.time_entries[0].note], ['adjustment', 'Forgot to clock in']);
+  assert.equal(fs.readdirSync(path.join(dir, 'sessions')).length, 0, 'an adjustment is not a session');
+
+  card.adjustTime({ ids: [ring.id], minutes: -30 });
+  assert.equal(card.getItem(ring.id).total_seconds, 3600);
+  assert.throws(() => card.adjustTime({ ids: [ring.id], minutes: -61 }), /only has 1h 00m/);
+  card.adjustTime({ ids: [ring.id], minutes: -60 });
+  assert.equal(card.getItem(ring.id).total_seconds, 0);
+  assert.equal(card.getItem(ring.id).status, IN_PROGRESS, 'taking time off leaves the status alone');
+  assert.equal(card.getItem(pendant.id).status, NOT_STARTED);
+});
+
+test('an adjustment goes to each piece, or is shared between them', () => {
+  const rings = card.addItem({ name: 'Ring', quantity: 3, separate: true }).map((i) => i.id);
+  card.adjustTime({ ids: rings, minutes: 30 });
+  assert.deepEqual(rings.map((id) => card.getItem(id).total_seconds), [1800, 1800, 1800]);
+  card.adjustTime({ ids: rings, minutes: 30, split: true });
+  assert.deepEqual(rings.map((id) => card.getItem(id).total_seconds), [2400, 2400, 2400]);
+  const ids = new Set(rings.map((id) => card.getItem(id).time_entries[1].session_id));
+  assert.equal(ids.size, 1, 'one adjustment, one id, like a session');
+  card.adjustTime({ ids: [OVERHEAD_ID], minutes: 15 });
+  assert.equal(card.overheadItem().total_seconds, 900);
+  for (const bad of [{ ids: [], minutes: 5 }, { ids: rings, minutes: 0 }, { ids: rings, minutes: 'ten' },
+    { ids: rings, minutes: 1e9 }, { ids: ['no-such-piece', rings[0]], minutes: 5 }, { ids: rings, minutes: 5, when: 'someday' }]) {
+    assert.throws(() => card.adjustTime(bad), TimeCardError);
+  }
+  assert.equal(card.getItem(rings[0]).total_seconds, 2400, 'a refused adjustment changes nothing');
+});
+
+test('adjustments count on their day, and are not sessions', () => {
+  const { checkPeriod, narrowItems, sessionCount } = require('../src/core/timecard.js');
+  const [ring] = card.addItem({ name: 'Ring' });
+  card.clockIn(new Date(2026, 8, 5, 9, 0));
+  card.clockOut({ [ring.id]: 100 }, new Date(2026, 8, 5, 10, 0));
+  card.adjustTime({ ids: [ring.id], minutes: 20, when: new Date(2026, 8, 12, 12, 0) });
+  assert.equal(sessionCount(card.getItem(ring.id)), 1);
+  const [week] = narrowItems(card.listItems(), checkPeriod({ from: '2026-09-12', to: '2026-09-12' }));
+  assert.equal(week.total_seconds, 1200);
+  const out = path.join(dir, 'out.csv');
+  card.exportCsv(out);
+  const [header, row] = fs.readFileSync(out, 'utf8').trim().split('\r\n').map((line) => line.split(','));
+  assert.equal(row[header.indexOf('work_sessions')], '1');
+  assert.equal(row[header.indexOf('total_minutes')], '80');
+});
+
 test('the photo library', () => {
   const photo = card.addPhoto(JPEG);
   assert.equal(card.addPhoto(JPEG), photo); // the same picture is only kept once

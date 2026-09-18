@@ -140,6 +140,24 @@ label, .field-label { font-size: 13px; color: var(--muted); display: block; marg
 .segmented input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
 
+/* ---- adjusting time ---- */
+.choose { border: 1px solid var(--line); border-radius: 12px; max-height: 230px; overflow-y: auto; background: var(--card); }
+.choose .group-title { padding: 6px 12px 4px; position: sticky; top: 0; }
+.choice {
+  display: flex; align-items: center; gap: 10px; padding: 6px 12px; margin: 0; border-top: 1px solid var(--line);
+  font-size: 14px; color: var(--ink); cursor: pointer;
+}
+.choice:first-child, .group-title + .choice { border-top: none; }
+.choice input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; margin: 0; }
+.choice .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choice .have { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.choice.finished .who { color: var(--muted); }
+.amount { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.amount input[type=number] { width: 70px; text-align: right; font-variant-numeric: tabular-nums; margin-left: 8px; }
+.amount .unit { color: var(--muted); font-size: 13px; margin-right: 6px; }
+.amount .segmented:last-child { margin-left: auto; }
+.hint.bad { color: var(--warn); }
+
 details { margin-top: 14px; }
 summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 

@@ -30,6 +30,7 @@
     <a href="#finishing">Finishing and reopening</a>
     <a href="#ticks">Tick boxes</a>
     <a href="#log">The time log of a piece</a>
+    <a href="#adjust">Adjusting time by hand</a>
     <a href="#reports">Reports and exports</a>
     <a href="#data">Where your data lives, and backing it up</a>
     <a href="#menu">The menu and keyboard shortcuts</a>
@@ -193,8 +194,37 @@
   <section id="log">
     <h2>The time log of a piece</h2>
     <p><b class="ui">Log</b> on any line lists every session that put time on that piece: when you clocked in and out, the share of
-      the session it was given, and what that came to. The title shows the total. At the bottom is the name of the file
-      the piece is stored in, in case you ever want to look at it directly.</p>
+      the session it was given, and what that came to. Time put on by hand is listed as an <i>adjustment</i>, with its day and
+      reason (see <a href="#adjust">the next section</a>). The title shows the total. At the bottom is the name of the file
+      the piece is stored in, in case you ever want to look at it directly. <b class="ui">Adjust time&hellip;</b> in this box opens the
+      adjustment box for the piece.</p>
+  </section>
+  <section id="adjust">
+    <h2>Adjusting time by hand</h2>
+    <p>Sessions are the normal way time gets onto a piece, but sometimes the clock wasn't running: work done before you had
+      BenchClock, a morning you forgot to clock in, a share that came out wrong at clock-out. <b class="ui">Adjust time</b> puts
+      time on a piece, or takes it off, without a session.</p>
+    <p>Open it from <b class="ui">Edit &rsaquo; Adjust time&hellip;</b> (<kbd>Ctrl</kbd> + <kbd>T</kbd>), which starts with whatever is ticked on the lists;
+      or from <b class="ui">Adjust time&hellip;</b> in a piece's <b class="ui">Log</b> or <b class="ui">Edit</b> box, which starts with that piece. The box asks:</p>
+    <ul>
+      <li><b>Which pieces?</b> Tick any number, on the bench or finished. TimeOverhead is at the bottom of the list, for the day of
+        ordering and packing you never clocked.</li>
+      <li><b>How much?</b> <b class="ui">Add</b> or <b class="ui">Take off</b>, then hours and minutes. With more than one piece ticked, choose whether
+        the amount goes <b class="ui">to each piece</b> or is <b class="ui">shared between them</b> evenly.</li>
+      <li><b>Day the work was done.</b> Reports count the time on this day, so a week's report comes out right even when you catch up
+        later. It starts as today.</li>
+      <li><b>Reason</b>, optional. It is kept in the log so that in a month you know why the number changed.</li>
+    </ul>
+    <p>The line above the buttons says what will happen before you press <b class="ui">Adjust</b>: <i>Moonstone ring: 1h 20m &rarr; 1h 50m</i>.
+      A piece's time can't go below nothing, so taking off more than it has waits until the number is fixed.</p>
+    <ul>
+      <li>An adjustment moves a piece from <b class="ui">Getting started</b> to <b class="ui">In progress</b> just as a session would.</li>
+      <li>Adjustments are not sessions. The number of sessions in a report and in the CSV counts real clock-ins only.</li>
+      <li>There is no undo, but an adjustment is undone by making the opposite one: took 30m off by mistake, add 30m back.</li>
+    </ul>
+    <div class="example"><b>Moving time from one piece to another.</b> You gave 40% of yesterday's session to the hoops and it should have
+      been the pendant. Open the hoops' <b class="ui">Log</b>, read what 40% came to, say 48m, and take 48m off, dated yesterday. Then add
+      48m to the pendant, dated yesterday. The day's total is unchanged and both logs say why.</div>
   </section>
 
   <section id="reports">
@@ -262,7 +292,7 @@
     <table>
       <tr><th>Menu</th><th>What is in it</th></tr>
       <tr><td><b class="ui">File</b></td><td>Add a piece, Report or export, Open the data folder, Quit.</td></tr>
-      <tr><td><b class="ui">Edit</b></td><td>Undo, cut, copy and paste, for the boxes you type in.</td></tr>
+      <tr><td><b class="ui">Edit</b></td><td>Undo, cut, copy and paste, for the boxes you type in; and <b class="ui">Adjust time</b>.</td></tr>
       <tr><td><b class="ui">View</b></td><td>Make everything larger or smaller, and full screen.</td></tr>
       <tr><td><b class="ui">Help</b></td><td>This guide, and <b class="ui">About BenchClock</b>, which shows the version you are running
         (on a Mac it is in the <b class="ui">BenchClock</b> menu). Have that to hand if you ever report a problem.</td></tr>
@@ -271,6 +301,7 @@
       <tr><th>Keys</th><th>Does</th></tr>
       <tr><td><kbd>Ctrl</kbd> + <kbd>N</kbd></td><td>Add a piece</td></tr>
       <tr><td><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Report or export</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>T</kbd></td><td>Adjust time, for the ticked pieces</td></tr>
       <tr><td><kbd>F1</kbd></td><td>Open this guide</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close the box that is open, changing nothing</td></tr>
       <tr><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd></td><td>One more or one fewer, in a <b class="ui">How many</b> box</td></tr>
@@ -288,11 +319,13 @@
     <h3>I forgot to clock out last night.</h3>
     <p>Clock out now, and set <b class="ui">Clock-out time</b> in the box to when you really stopped.</p>
     <h3>I forgot to clock in.</h3>
-    <p>A session can't be started in the past. Clock in now and let the next sessions carry it, or accept that this one is missing.
-      The totals are estimates in any case.</p>
+    <p>A session can't be started in the past. Clock in now for the rest of the day, and put the missed time on the pieces with
+      <b class="ui">Edit &rsaquo; Adjust time</b>, dated today. See <a href="#adjust">Adjusting time by hand</a>.</p>
     <h3>I gave the time to the wrong piece.</h3>
-    <p>A clocked-out session can't be edited inside BenchClock. The entries are plain text in the piece's file (its name is at the bottom
-      of the piece's <b class="ui">Log</b>), so they can be corrected by hand by someone comfortable editing a JSON file. Back the folder up first.</p>
+    <p>A clocked-out session can't be edited, but its result can be corrected: take the time off one piece and add it to the other with
+      <b class="ui">Adjust time</b>, dated the day of the session. There is a worked example in <a href="#adjust">Adjusting time by hand</a>.</p>
+    <h3>I worked on this before I had BenchClock.</h3>
+    <p>Add the piece, then <b class="ui">Adjust time</b> to put the hours already spent on it, dated whenever the work was done.</p>
     <h3>I finished a piece too soon.</h3>
     <p>Show the <b class="ui">Finished</b> list and press <b class="ui">Reopen</b> on it.</p>
     <h3>My report is empty, or a piece is missing from it.</h3>

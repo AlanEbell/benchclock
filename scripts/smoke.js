@@ -73,6 +73,38 @@ app.on('browser-window-created', (event, win) => {
       assert.equal(byName('Hoops')[0].total_seconds, 0);
       assert.equal(fs.existsSync(path.join(dataDir, 'current_session.json')), false);
       assert.equal(await run("return $('clockBtn').textContent"), 'Clock in');
+      // time put on by hand: from the Edit menu, on whatever is ticked
+      const ringId = firstBatch[0].id;
+      await run(`selected.add(${JSON.stringify(ringId)}); render();`);
+      win.webContents.send('menu', 'adjust');
+      await new Promise((r) => setTimeout(r, 300));
+      assert.equal(await run("return $('adjustDlg').open && document.querySelectorAll('#adjustRows input:checked').length"), 1, 'the ticked piece is chosen');
+      assert.equal(await run("return $('adjShare').hidden"), true, 'one piece: nothing to share');
+      await run("$('adjHours').value = 1; $('adjMins').value = 0; $('adjNote').value = 'before BenchClock'; $('adjWhen').value = '2000-06-15'; updateAdjust();");
+      assert.match(await run("return $('adjustSummary').textContent"), /Signet ring \(\d of 2\): 0h 30m \u2192 1h 30m/);
+      await run("$('adjustSave').click(); await new Promise((r) => setTimeout(r, 400));");
+      const ring = () => JSON.parse(fs.readFileSync(path.join(dataDir, 'items', `${ringId}.json`)));
+      near(ring().total_seconds, 5400);
+      const entry = ring().time_entries.at(-1);
+      assert.deepEqual([entry.kind, entry.seconds, entry.note, entry.clock_in.slice(0, 10)], ['adjustment', 3600, 'before BenchClock', '2000-06-15']);
+      assert.equal(await run("return $('adjustDlg').open"), false);
+      // taking off more than there is waits; the log shows the adjustment; TimeOverhead can be adjusted too
+      await run("document.querySelector(`#bench [data-id=${JSON.stringify(" + JSON.stringify(ringId) + ")}] [data-act=log]`).click();");
+      assert.match(await run("return $('logBody').textContent"), /Adjustment: before BenchClock/);
+      await run("$('logAdjust').click(); await new Promise((r) => setTimeout(r, 200));");
+      assert.equal(await run("return $('adjustDlg').open && !$('logDlg').open"), true, 'the log hands over to the adjust box');
+      await run("document.querySelector('input[name=adjDir][value=off]').checked = true; $('adjHours').value = 2; $('adjMins').value = 0; $('adjWhen').value = '2000-06-16'; updateAdjust();");
+      assert.equal(await run("return $('adjustSave').disabled"), true, 'more than the piece has');
+      assert.match(await run("return $('adjustSummary').textContent"), /can't come off/);
+      await run("$('adjHours').value = 1; updateAdjust(); $('adjustSave').click(); await new Promise((r) => setTimeout(r, 400));");
+      near(ring().total_seconds, 1800);
+      await run("selected.clear(); render(); await api('adjustTime', { ids: [state.overhead.id], minutes: 5, when: '2000-06-15T12:00' });");
+      assert.equal(ring().time_entries.length, 3);
+      near(byName('TimeOverhead')[0].total_seconds + 300, JSON.parse(fs.readFileSync(path.join(dataDir, 'items', 'time-overhead.json'))).total_seconds);
+      await run("await api('adjustTime', { ids: [state.overhead.id], minutes: -5, when: '2000-06-15T12:00' });");
+      const editMenu = Menu.getApplicationMenu().items.find((item) => item.label === '&Edit').submenu.items.map((item) => item.label);
+      assert.ok(editMenu.includes('Adjust time\u2026'), 'Edit menu has Adjust time');
+
       const pdf = path.join(dataDir, 'report.pdf');
       await writeReportPdf(pdf);
       const bytes = fs.readFileSync(pdf);

@@ -53,6 +53,16 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 Each `time_entries[]` entry: `session_id`, `clock_in`, `clock_out`, `percent` (share of
 that session, 0-100), `seconds` (session length x percent).
 
+An entry may also carry `kind` and `note`. `kind` is `"adjustment"` for time put on by hand
+(work done before BenchClock, a forgotten clock-in, a share corrected after the fact) rather than
+by clocking out. For an adjustment `clock_in` and `clock_out` are both the day the work belongs
+to (which is the day reports count it on), `percent` is 100, `seconds` may be **negative** (time
+taken off), `note` is the reason given (may be empty), and `session_id` starts with `adjust-`;
+there is no file for it under `sessions/`. One adjustment made to several pieces at once puts an
+entry with the same `session_id` on each. A missing `kind` means an ordinary session entry.
+`total_seconds` never goes below 0. Session counts (`work_sessions`, and in the report) leave
+adjustments out.
+
 When part of a batch is finished early, those pieces become a new `finished` item
 (`split_from` set) and the batch's existing time entries are divided between the two
 in proportion to their quantities.

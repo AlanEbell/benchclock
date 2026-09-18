@@ -5,7 +5,7 @@ const os = require('node:os');
 const { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, protocol, shell } = require('electron');
 
 const {
-  TimeCard, TimeCardError, labelItems, toIso, checkPeriod, narrowItem, narrowItems, FINISHED, OVERHEAD, PIECE_TYPES,
+  TimeCard, TimeCardError, labelItems, toIso, checkPeriod, narrowItem, narrowItems, sessionIds, FINISHED, OVERHEAD, PIECE_TYPES,
 } = require('../core/timecard.js');
 const { buildReportHtml, periodLabel } = require('./report.js');
 const { version, homepage } = require('../../package.json');
@@ -120,6 +120,7 @@ const api = {
   finishItems: ({ ids }) => card.finishItems(ids),
   finishPart: ({ id, count }) => card.finishPartOfBatch(id, count),
   reopenItem: ({ id }) => card.reopenItem(id),
+  adjustTime: (change) => card.adjustTime(change),
   deletePhoto: ({ photo }) => card.deletePhoto(photo),
   importPhotoPath: ({ file }) => ({ photo: importPhoto(String(file)) }),
 
@@ -139,7 +140,7 @@ const api = {
       pieces: pieces.reduce((n, i) => n + i.quantity, 0),
       making: pieces.reduce((n, i) => n + i.total_seconds, 0),
       overhead: rows.filter((i) => i.status === OVERHEAD).reduce((n, i) => n + i.total_seconds, 0),
-      sessions: new Set(rows.flatMap((i) => i.time_entries.map((e) => e.session_id))).size,
+      sessions: sessionIds(rows).size,
     };
   },
 
@@ -239,7 +240,10 @@ function buildMenu() {
     },
     {
       label: '&Edit',
-      submenu: [{ role: 'undo' }, { role: 'redo' }, line, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
+      submenu: [
+        { role: 'undo' }, { role: 'redo' }, line, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
+        line, { label: 'Adjust time\u2026', accelerator: 'CmdOrCtrl+T', click: toPage('adjust') },
+      ],
     },
     {
       label: '&View',

@@ -5,7 +5,7 @@
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const { iconSvg } = require('../renderer/icons.js');
-const { checkPeriod, inPeriod, narrowItem, narrowItems } = require('../core/timecard.js');
+const { checkPeriod, inPeriod, narrowItem, narrowItems, sessionIds, sessionCount } = require('../core/timecard.js');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -54,7 +54,7 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
   const picture = (item) => (item.photo ?
     `<span class="tile"><img src="${esc(pathToFileURL(path.join(photosDir, item.photo)).href)}" alt=""></span>` :
     `<span class="tile">${iconSvg(item.type)}</span>`);
-  const sessions = (item) => new Set(item.time_entries.map((e) => e.session_id)).size;
+  const sessions = sessionCount;
 
   function table(list, finished) {
     if (!list.length) return `<p class="none">${ranged ? 'Nothing in this period.' : 'Nothing here yet.'}</p>`;
@@ -93,7 +93,7 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
   const sum = (list) => list.reduce((n, i) => n + i.total_seconds, 0);
   const making = sum(items);
   const all = making + (overhead ? overhead.total_seconds : 0);
-  const sessionCount = new Set(items.flatMap((i) => i.time_entries.map((e) => e.session_id))).size;
+  const sessionTotal = sessionIds(items).size;
   const covers = [pieces, periodLabel(period)].filter(Boolean).join(' \u00b7 ');
   const share = (secs) => (all ? `${Math.round(secs / all * 100)}%` : '');
   const stat = (label, value, note = '') => `<div class="stat"><div class="label">${label}</div><div class="value">${value}</div><div class="note">${note}</div></div>`;
@@ -141,7 +141,7 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
     ranged ? ' &middot; time counts on the day its session was clocked in' : ''}</div>
   <div class="stats">
     ${partial ? stat('Time on these pieces', duration(making), `${hours(making)} hours`) +
-      stat('Sessions', sessionCount, ranged ? 'in this period' : '') : `
+      stat('Sessions', sessionTotal, ranged ? 'in this period' : '') : `
     ${stat(ranged ? 'Time clocked' : 'All time clocked', duration(all), `${hours(all)} hours`)}
     ${stat('Making', duration(making), share(making) && `${share(making)} of clocked time`)}
     ${stat('TimeOverhead', duration(overhead.total_seconds), share(overhead.total_seconds) && `${share(overhead.total_seconds)} of clocked time`)}`}
@@ -160,7 +160,7 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
 
   ${partial ? '' : `<h2>Not making</h2>
   <div class="overhead"><span class="tile">${iconSvg('overhead')}</span>
-    <div class="grow"><b>${esc(overhead.name)}</b><div class="sub">Clocked time that wasn't given to a piece &middot; ${plural(overhead.time_entries.length, 'session')}</div></div>
+    <div class="grow"><b>${esc(overhead.name)}</b><div class="sub">Clocked time that wasn't given to a piece &middot; ${plural(sessionCount(overhead), 'session')}</div></div>
     <div class="num"><b>${duration(overhead.total_seconds)}</b><div class="sub">${hours(overhead.total_seconds)} hours</div></div></div>`}
   </body></html>`;
 }

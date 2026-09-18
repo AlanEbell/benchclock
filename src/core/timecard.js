@@ -29,6 +29,10 @@ const OVERHEAD = 'overhead';
 const OVERHEAD_ID = 'time-overhead';
 const OVERHEAD_NAME = 'TimeOverhead';
 
+// A time entry made by hand rather than by clocking out (see adjustTime).
+const ADJUSTMENT = 'adjustment';
+const MAX_ADJUSTMENT_MINUTES = 366 * 24 * 60;
+
 // What a piece is. The id is what gets stored; the interface draws an icon for each.
 const PIECE_TYPES = [
   { id: 'earrings', label: 'Earrings' },
@@ -88,6 +92,10 @@ function writeJson(file, data) {
 }
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+
+/** The clock-in / clock-out sessions that gave any of `items` time. Adjustments are not sessions. */
+const sessionIds = (items) => new Set(items.flatMap((item) => item.time_entries.filter((e) => e.kind !== ADJUSTMENT).map((e) => e.session_id)));
+const sessionCount = (item) => sessionIds([item]).size;
 
 function refreshTotals(item) {
   const total = item.time_entries.reduce((sum, entry) => sum + entry.seconds, 0);
@@ -457,6 +465,42 @@ class TimeCard {
     return record;
   }
 
+  // ----- adjustments ---------------------------------------------------
+
+  /**
+   * Put time on pieces, or take it off, without a session: work done before BenchClock, a
+   * clock-in that was forgotten, a share that came out wrong at clock-out. `minutes` may be
+   * negative. Each piece in `ids` gets the whole amount, or with `split` they share it evenly.
+   * `when` is the day the work belongs to, which is the day reports count it on. `note` says why.
+   * TimeOverhead can be adjusted too. Returns the seconds given to each piece.
+   */
+  adjustTime({ ids, minutes, split = false, when, note = '' } = {}) {
+    if (!Array.isArray(ids) || !ids.length) throw new TimeCardError('Choose at least one piece.');
+    ids = [...new Set(ids.map(String))];
+    minutes = Number(minutes);
+    if (!Number.isFinite(minutes) || minutes === 0) throw new TimeCardError('How many minutes? A number other than 0.');
+    if (Math.abs(minutes) > MAX_ADJUSTMENT_MINUTES) throw new TimeCardError('That is more than a year of time. Check the number.');
+    const seconds = round1(minutes * 60 / (split ? ids.length : 1));
+    const stamp = toIso(asDate(when));
+    const items = ids.map((id) => this.getItem(id)); // every one found before anything is saved
+    for (const item of items) {
+      if (item.total_seconds + seconds < -0.05) {
+        throw new TimeCardError(`${item.name} only has ${formatDuration(item.total_seconds)} on it, so ${formatDuration(-seconds)} can't come off.`);
+      }
+    }
+    const entry = {
+      session_id: `adjust-${crypto.randomBytes(4).toString('hex')}`, kind: ADJUSTMENT, clock_in: stamp, clock_out: stamp,
+      percent: 100, seconds, note: String(note ?? '').trim(),
+    };
+    for (const item of items) {
+      item.time_entries.push({ ...entry });
+      if (seconds > 0 && item.status === NOT_STARTED) item.status = IN_PROGRESS;
+      if (seconds > 0 && !item.started_at) item.started_at = stamp;
+      this.saveItem(item);
+    }
+    return { seconds, items: items.map((i) => ({ id: i.id, name: i.name, total_seconds: i.total_seconds })) };
+  }
+
   // ----- export --------------------------------------------------------
 
   /** Write `items` as CSV; by default every piece followed by TimeOverhead. Returns the row count. */
@@ -466,7 +510,7 @@ class TimeCard {
       item.id, item.name, item.sku, item.type, item.photo || '', item.batch_id || '', item.quantity, item.status, item.created_at,
       item.started_at || '', item.finished_at || '', round2(item.total_seconds / 3600),
       round1(item.total_seconds / 60), round1(item.seconds_per_piece / 60),
-      new Set(item.time_entries.map((e) => e.session_id)).size, item.notes,
+      sessionCount(item), item.notes,
     ]);
     const text = [CSV_FIELDS, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
     fs.writeFileSync(file, text, 'utf8');
@@ -476,7 +520,7 @@ class TimeCard {
 
 module.exports = {
   TimeCard, TimeCardError, labelItems, formatDuration, toIso, defaultDataDir,
-  checkPeriod, inPeriod, narrowItem, narrowItems,
-  NOT_STARTED, IN_PROGRESS, FINISHED, OVERHEAD, OVERHEAD_ID, OVERHEAD_NAME,
+  checkPeriod, inPeriod, narrowItem, narrowItems, sessionIds, sessionCount,
+  NOT_STARTED, IN_PROGRESS, FINISHED, OVERHEAD, OVERHEAD_ID, OVERHEAD_NAME, ADJUSTMENT,
   PIECE_TYPES, DEFAULT_TYPE, CSV_FIELDS, SCHEMA_VERSION,
 };
