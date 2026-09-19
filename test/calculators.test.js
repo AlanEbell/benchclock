@@ -77,19 +77,32 @@ test('metal weight from volume and density, and the same piece in another metal'
 
 test('changing the purity of what you have', () => {
   // 10 g of 24k to 18k: add 3.333 g of alloy, making 13.333
-  assert.deepEqual(c.changePurity({ have: 10, purity: 1, target: 0.75 }), { add: 'copper', amount: 3.333, total: 13.333, fine: 10 });
+  const down = c.changePurity({ have: 10, purity: 1, target: 0.75 });
+  assert.deepEqual([down.add, down.amount, down.silver, down.copper, down.total, down.fine], ['alloy', 3.333, 0, 3.333, 13.333, 10]);
+  assert.deepEqual(down.makeup, { fine: 75, silver: 0, copper: 25, unknown: 0 });
+  // 18k rich yellow from fine gold: the alloy is 76% silver, 24% copper, so 19% and 6% of the finished metal
+  const rich = c.changePurity({ have: 75, purity: 1, target: 0.75, silverShare: 0.76 });
+  assert.deepEqual([rich.amount, rich.silver, rich.copper, rich.total], [25, 19, 6, 100]);
+  assert.deepEqual(rich.makeup, { fine: 75, silver: 19, copper: 6, unknown: 0 });
+  // from 22k down to 18k the 22k's own alloy is of unknown make-up
+  const from22 = c.changePurity({ have: 24, purity: 22 / 24, target: 0.75, silverShare: 0.5 });
+  assert.deepEqual([from22.amount, from22.silver, from22.copper], [5.333, 2.667, 2.667]);
+  assert.deepEqual(from22.makeup, { fine: 75, silver: 9.09, copper: 9.09, unknown: 6.82 });
   // 10 g of 14k up to 18k: add fine gold (10 x 4) / 6 = 6.667
   const up = c.changePurity({ have: 10, purity: 14 / 24, target: 0.75 });
   assert.deepEqual([up.add, up.amount, up.total], ['fine', 6.667, 16.667]);
   near(c.karatOf(up.fine, up.total), 18, 0.05);
   // sterling up to 980: 100 g needs 100 x 0.055 / 0.02 = 275 g of fine silver
-  assert.deepEqual(c.changePurity({ have: 100, purity: 0.925, target: 0.98 }), { add: 'fine', amount: 275, total: 375, fine: 367.5 });
+  const up980 = c.changePurity({ have: 100, purity: 0.925, target: 0.98 });
+  assert.deepEqual([up980.add, up980.amount, up980.total, up980.fine], ['fine', 275, 375, 367.5]);
   // coin silver up to sterling: 50 g needs 50 x 0.025 / 0.075 = 16.667 g of fine
   assert.equal(c.changePurity({ have: 50, purity: 0.9, target: 0.925 }).amount, 16.667);
   // sterling down to coin: 50 g needs 50 x 0.025 / 0.9 = 1.389 g of copper
-  assert.deepEqual([c.changePurity({ have: 50, purity: 0.925, target: 0.9 }).add, c.changePurity({ have: 50, purity: 0.925, target: 0.9 }).amount], ['copper', 1.389]);
+  assert.deepEqual([c.changePurity({ have: 50, purity: 0.925, target: 0.9 }).add, c.changePurity({ have: 50, purity: 0.925, target: 0.9 }).amount], ['alloy', 1.389]);
   // 92.5 g of fine silver to sterling: add 7.5 g of copper, making 100
-  assert.deepEqual(c.changePurity({ have: 92.5, purity: 1, target: 0.925 }), { add: 'copper', amount: 7.5, total: 100, fine: 92.5 });
+  assert.deepEqual([c.changePurity({ have: 92.5, purity: 1, target: 0.925 }).amount, c.changePurity({ have: 92.5, purity: 1, target: 0.925 }).copper], [7.5, 7.5]);
+  assert.ok(c.GOLD_COLOURS.some((g) => g.id === 'kent-raible' && g.silverShare === 0.76));
+  assert.deepEqual(c.alloyRecipe({ total: 100, ...c.recipeById('gold-18k-kent-raible') }), { gold: 75, silver: 19, copper: 6, total: 100, karat: 18, fineness: 940, goldFineness: 750 });
   // no change, impossible asks, and nonsense
   assert.deepEqual(c.changePurity({ have: 10, purity: 0.75, target: 0.75 }).amount, 0);
   assert.equal(c.changePurity({ have: 10, purity: 0.925, target: 1 }), null, 'nothing added to sterling makes it pure');

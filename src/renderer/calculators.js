@@ -144,19 +144,54 @@ function usePurityPreset(presetId, numberField) {
   $(numberField).value = Number((p.purity * scale).toFixed(scale === 24 ? 2 : 1));
   remember(numberField, $(numberField).value);
 }
+function colourList() {
+  $('cColour').innerHTML = calc.GOLD_COLOURS.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join('') + '<option value="custom">Your own split</option>';
+  $('cColour').value = 'kent-raible';
+}
+/** Silver and copper as % of the finished metal, from a colour's split of the alloy portion. */
+function fillColour(id) {
+  const g = calc.GOLD_COLOURS.find((x) => x.id === id);
+  if (!g) return;
+  const unit = $('cUnit').value; const scale = UNIT_SCALE[unit];
+  const alloyPct = Math.max(0, 100 * (1 - num('cTo') / scale));
+  $('cSilverPct').value = Number((alloyPct * g.silverShare).toFixed(2));
+  $('cCopperPct').value = Number((alloyPct * (1 - g.silverShare)).toFixed(2));
+  remember('cSilverPct', $('cSilverPct').value); remember('cCopperPct', $('cCopperPct').value);
+}
+/** The share of the added alloy that is silver, from the two percentages typed. */
+function silverShare() {
+  const s = num('cSilverPct'); const c = num('cCopperPct');
+  return s + c > 0 ? s / (s + c) : 0;
+}
 function alloy() {
   const unit = $('cUnit').value; const scale = UNIT_SCALE[unit];
   const show = (p) => (unit === 'karat' ? `${Number((p * 24).toFixed(2))}k` : unit === 'fineness' ? `${Math.round(p * 1000)} fine` : `${Number((p * 100).toFixed(1))}%`);
   const nameOf = (presetField, p) => { const preset = calc.PURITIES.find((x) => x.id === $(presetField).value); return preset ? preset.name.toLowerCase() : `${show(p)} metal`; };
   const P = num('cFrom') / scale; const T = num('cTo') / scale;
+  const goldDown = unit === 'karat' && T < P;
+  $('cAlloyBox').hidden = !goldDown;
+  if (goldDown) {
+    const alloyPct = Number((100 * (1 - T)).toFixed(2));
+    const typed = num('cSilverPct') + num('cCopperPct');
+    $('cAlloyHint').textContent = `${show(T)} is ${Number((100 * T).toFixed(2))}% gold, so silver and copper together are ${alloyPct}%` +
+      (Math.abs(typed - alloyPct) > 0.05 ? `; you have ${Number(typed.toFixed(2))}%, so only their ratio is used.` : '.');
+  }
   const fineName = num('cTo') > 0 && (unit === 'karat' ? 'fine gold' : unit === 'fineness' ? 'fine silver' : 'fine metal');
   let out = head(`${num('cAmount')} g of ${esc(nameOf('cFromPreset', P))} to ${show(T)}`);
-  const r = calc.changePurity({ have: num('cAmount'), purity: P, target: T });
+  const r = calc.changePurity({ have: num('cAmount'), purity: P, target: T, silverShare: goldDown ? silverShare() : 0 });
   if (num('cFrom') > scale || num('cTo') > scale) out += bad(`Purity can't be more than ${scale} here.`);
   else if (!r) out += bad(T === 1 && P < 1 ? 'Nothing added to it will make it pure: that takes refining.' : T === 0 ? 'A purity of 0 is just copper.' : 'Type the amount and both purities.');
   else if (r.amount === 0) out += line('Nothing to add', 'it is that already');
-  else {
-    out += line(`Add ${r.add === 'fine' ? fineName : 'copper (or alloy)'}`, `${r.amount.toFixed(3)} g`, 'big') +
+  else if (r.add === 'fine') {
+    out += line(`Add ${fineName}`, `${r.amount.toFixed(3)} g`, 'big') +
+      line(`Melted together you have ${show(T)} weighing`, `${r.total.toFixed(3)} g`, 'big') + line('Fine metal in it', `${r.fine.toFixed(3)} g`);
+  } else if (goldDown) {
+    const m = r.makeup;
+    out += (r.silver ? line('Add fine silver', `${r.silver.toFixed(3)} g`, 'big') : '') + (r.copper ? line('Add copper', `${r.copper.toFixed(3)} g`, 'big') : '') +
+      line(`Melted together you have ${show(T)} weighing`, `${r.total.toFixed(3)} g`, 'big') +
+      line('Made up of', `${m.fine}% gold, ${m.silver}% silver, ${m.copper}% copper${m.unknown ? `, ${m.unknown}% whatever alloy was in the ${esc(nameOf('cFromPreset', P))}` : ''}`);
+  } else {
+    out += line('Add copper (or alloy)', `${r.amount.toFixed(3)} g`, 'big') +
       line(`Melted together you have ${show(T)} weighing`, `${r.total.toFixed(3)} g`, 'big') + line('Fine metal in it', `${r.fine.toFixed(3)} g`);
   }
   out += head('What purity is it');
@@ -238,8 +273,10 @@ jumpGaugeList();
 metalLists();
 recipeList();
 purityLists();
+colourList();
 restore();
 if (remembered('rGold') === null) fillRecipe($('rRecipe').value);
+if (remembered('cSilverPct') === null) fillColour($('cColour').value);
 document.addEventListener('input', (ev) => {
   if (ev.target.id) remember(ev.target.id, ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value);
   recalc();
@@ -252,6 +289,9 @@ document.addEventListener('change', (ev) => {
   if (ev.target.id === 'cToPreset') usePurityPreset(ev.target.value, 'cTo');
   if (ev.target.id === 'cFrom') { $('cFromPreset').value = ''; remember('cFromPreset', ''); }
   if (ev.target.id === 'cTo') { $('cToPreset').value = ''; remember('cToPreset', ''); }
+  if (ev.target.id === 'cColour' && ev.target.value !== 'custom') fillColour(ev.target.value);
+  if (['cSilverPct', 'cCopperPct'].includes(ev.target.id)) { $('cColour').value = 'custom'; remember('cColour', 'custom'); }
+  if (['cTo', 'cToPreset', 'cUnit'].includes(ev.target.id) && $('cColour').value !== 'custom') fillColour($('cColour').value);
   if (ev.target.id === 'cUnit') { for (const [preset, field] of [['cFromPreset', 'cFrom'], ['cToPreset', 'cTo']]) if ($(preset).value) usePurityPreset($(preset).value, field); }
   if (['rGold', 'rSilver', 'rCopper'].includes(ev.target.id)) { $('rRecipe').value = 'custom'; remember('rRecipe', 'custom'); }
   recalc();

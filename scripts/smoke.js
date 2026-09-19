@@ -192,6 +192,11 @@ app.on('browser-window-created', (event, win) => {
       assert.match(await inCalc("return $('aOut').textContent"), /50 g of coin silver \(900\) to 925 fine.*Add fine silver16\.667 g.*you have 925 fine weighing66\.667 g/);
       await inCalc("$('cAmount').value = 100; $('cFrom').value = 925; $('cFrom').dispatchEvent(new Event('change', { bubbles: true })); $('cTo').value = 980; $('cTo').dispatchEvent(new Event('change', { bubbles: true })); recalc();");
       assert.match(await inCalc("return $('aOut').textContent"), /Add fine silver275\.000 g/);
+      // gold going down: the alloy is silver and copper in a chosen split; 75 g of fine gold to 18k rich yellow is 19 g silver and 6 g copper
+      await inCalc("$('cUnit').value = 'karat'; $('cUnit').dispatchEvent(new Event('change', { bubbles: true })); $('cFromPreset').value = 'gold-24'; $('cFromPreset').dispatchEvent(new Event('change', { bubbles: true })); $('cToPreset').value = 'gold-18'; $('cToPreset').dispatchEvent(new Event('change', { bubbles: true })); $('cAmount').value = 75; $('cColour').value = 'kent-raible'; $('cColour').dispatchEvent(new Event('change', { bubbles: true })); recalc();");
+      assert.equal(await inCalc("return $('cAlloyBox').hidden"), false);
+      assert.deepEqual(await inCalc("return [$('cSilverPct').value, $('cCopperPct').value]"), ['19', '6']);
+      assert.match(await inCalc("return $('aOut').textContent"), /Add fine silver19\.000 g.*Add copper6\.000 g.*you have 18k weighing100\.000 g.*75% gold, 19% silver, 6% copper/);
       await new Promise((r) => setTimeout(r, 200));
       fs.writeFileSync(path.join(dataDir, 'calculators-purity.png'), (await calcWin.webContents.capturePage()).toPNG());
       await inCalc("document.querySelector('nav [data-panel=recipe]').click(); $('rRecipe').value = 'gold-18k-rose'; $('rRecipe').dispatchEvent(new Event('change', { bubbles: true })); $('rTotal').value = 20; $('rTarget').value = 16; recalc();");

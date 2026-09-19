@@ -200,20 +200,37 @@ function sameIn(grams, fromMetal, toMetal) {
 
 /**
  * You have `have` grams of metal at `purity` and want it at `target`. Purities are fractions (sterling
- * 0.925, 18k 0.75). To go up, fine metal (purity 1) is added; to go down, copper or alloy (purity 0).
- * Returns what to add, how much, and what the melt comes to.
+ * 0.925, 18k 0.75). To go up, fine metal (purity 1) is added. To go down, alloy is added: copper, or for
+ * gold a mix of silver and copper, `silverShare` (0 to 1) of it being silver. Returns what to add, how
+ * much of each, and what the melt comes to.
  */
-function changePurity({ have, purity, target }) {
-  const P = Number(purity); const T = Number(target); const W = Number(have);
+function changePurity({ have, purity, target, silverShare = 0 }) {
+  const P = Number(purity); const T = Number(target); const W = Number(have); const S = Math.min(Math.max(Number(silverShare) || 0, 0), 1);
   if (!(P >= 0 && P <= 1 && T >= 0 && T <= 1) || !(W > 0)) return null;
   const up = T > P;
   const Q = up ? 1 : 0; // the purity of what gets added
-  const add = up ? 'fine' : 'copper';
-  if (T === P) return { add, amount: 0, total: round(W, 3), fine: round(W * T, 3) };
+  const add = up ? 'fine' : 'alloy';
+  if (T === P) return { add, amount: 0, silver: 0, copper: 0, total: round(W, 3), fine: round(W * T, 3) };
   if (T === Q) return null; // nothing added to sterling makes it pure, and nothing makes it plain copper
   const amount = W * (T - P) / (Q - T);
-  return { add, amount: round(amount, 3), total: round(W + amount, 3), fine: round((W + amount) * T, 3) };
+  const total = W + amount;
+  return {
+    add, amount: round(amount, 3), silver: up ? 0 : round(amount * S, 3), copper: up ? 0 : round(amount * (1 - S), 3),
+    total: round(total, 3), fine: round(total * T, 3),
+    // the finished metal's make-up, counting only what is known: the fine metal and what was added
+    makeup: { fine: round(100 * T, 2), silver: up ? 0 : round(100 * amount * S / total, 2), copper: up ? 0 : round(100 * amount * (1 - S) / total, 2), unknown: round(100 * W * (1 - P) / total, 2) },
+  };
 }
+
+/** How the non-gold part of a coloured gold divides between silver and copper: the usual proportions. */
+const GOLD_COLOURS = [
+  { id: 'kent-raible', name: 'Kent Raible blend (19 silver : 6 copper in 18k)', silverShare: 0.76 },
+  { id: 'yellow', name: 'Yellow (half silver, half copper)', silverShare: 0.5 },
+  { id: 'pale-yellow', name: 'Pale yellow (more silver)', silverShare: 0.65 },
+  { id: 'rose', name: 'Rose (one part silver to four copper)', silverShare: 0.2 },
+  { id: 'red', name: 'Red (copper only)', silverShare: 0 },
+  { id: 'green', name: 'Green (silver only)', silverShare: 1 },
+];
 
 /** Purities people start from, as fractions. */
 const PURITIES = [
@@ -238,6 +255,7 @@ const PURITIES = [
 const RECIPES = [
   { id: 'gold-22k', name: '22k yellow gold', gold: 91.7, silver: 5, copper: 3.3 },
   { id: 'gold-18k-yellow', name: '18k yellow gold', gold: 75, silver: 12.5, copper: 12.5 },
+  { id: 'gold-18k-kent-raible', name: '18k Kent Raible blend', gold: 75, silver: 19, copper: 6 },
   { id: 'gold-18k-rose', name: '18k rose gold', gold: 75, silver: 5, copper: 20 },
   { id: 'gold-18k-red', name: '18k red gold', gold: 75, silver: 0, copper: 25 },
   { id: 'gold-18k-green', name: '18k green gold', gold: 75, silver: 25, copper: 0 },
@@ -296,7 +314,7 @@ function convert(value, from, to, units) {
 const api = {
   INCH, TROY_OUNCE, PENNYWEIGHT, CARAT, SOLDER_ALLOWANCE, KNUCKLE_ALLOWANCE, METALS, LENGTH_UNITS, WEIGHT_UNITS, UK_LETTERS,
   round, ringDiameter, ringSizes, ringSizeChart, ukToIndex, indexToUk, blankLength, ellipsePerimeter, bezelStrip,
-  awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, changePurity, PURITIES, karatOf, convert,
+  awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, changePurity, PURITIES, GOLD_COLOURS, karatOf, convert,
   RECIPES, recipeById, alloyRecipe, mixLots,
 };
 if (typeof module !== 'undefined') module.exports = api;
