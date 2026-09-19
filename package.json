@@ -1,7 +1,7 @@
 {
   "name": "benchclock",
   "productName": "BenchClock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "BenchClock, a time card for jewelry artists: clock in and out, and split each session across the pieces on the bench.",
   "author": "AlanEbell <13323211+AlanEbell@users.noreply.github.com>",
   "license": "MIT",
