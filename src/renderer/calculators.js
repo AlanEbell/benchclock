@@ -238,6 +238,33 @@ function recipe() {
   $('rOut').innerHTML = out;
 }
 
+function fromOneList() {
+  $('fRecipe').innerHTML = calc.RECIPES.map((r) => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  $('fRecipe').value = 'gold-18k-kent-raible';
+}
+function fillFromOne(id) {
+  const r = calc.recipeById(id);
+  if (!r || id === 'custom') return;
+  $('fGold').value = r.gold; $('fSilver').value = r.silver; $('fCopper').value = r.copper;
+  for (const f of ['fGold', 'fSilver', 'fCopper']) remember(f, $(f).value);
+}
+function fromOne() {
+  const known = $('fKnown').value;
+  const name = calc.recipeById($('fRecipe').value);
+  const r = calc.recipeFromOne({ gold: num('fGold'), silver: num('fSilver'), copper: num('fCopper'), known, amount: num('fAmount') });
+  const label = { gold: 'fine gold', silver: 'fine silver', copper: 'copper' };
+  let out = head(`${num('fAmount')} g of ${label[known]} in ${esc(name ? name.name.toLowerCase() : 'your recipe')}`);
+  if (!r) out += bad(num(known === 'gold' ? 'fGold' : known === 'silver' ? 'fSilver' : 'fCopper') > 0 ? 'Type how much you have.' : `This recipe has no ${label[known]} in it, so it can't set the rest.`);
+  else {
+    for (const part of ['gold', 'silver', 'copper']) {
+      if (part === known) continue;
+      if (r[part] > 0) out += line(`Add ${label[part]}`, `${r[part].toFixed(3)} g`, 'big');
+    }
+    out += line('Melted together you have', `${r.total.toFixed(3)} g`, 'big') + line('Which is', r.gold ? `${r.karat}k, ${r.goldFineness} fine gold` : `${r.fineness} fine silver`);
+  }
+  $('fOut').innerHTML = out;
+}
+
 function gauge() {
   const g = num('gGauge');
   const mmIn = num('gMm');
@@ -264,7 +291,7 @@ function units() {
 
 // ---- wiring ---------------------------------------------------------------
 
-const ALL = [ringBlank, bangle, bezel, jump, weight, alloy, recipe, gauge, units];
+const ALL = [ringBlank, bangle, bezel, jump, weight, alloy, recipe, fromOne, gauge, units];
 function recalc() { for (const fn of ALL) fn(); }
 
 ringChart();
@@ -272,10 +299,12 @@ gaugeChart();
 jumpGaugeList();
 metalLists();
 recipeList();
+fromOneList();
 purityLists();
 colourList();
 restore();
 if (remembered('rGold') === null) fillRecipe($('rRecipe').value);
+if (remembered('fGold') === null) fillFromOne($('fRecipe').value);
 if (remembered('cSilverPct') === null) fillColour($('cColour').value);
 document.addEventListener('input', (ev) => {
   if (ev.target.id) remember(ev.target.id, ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value);
@@ -285,6 +314,8 @@ document.addEventListener('change', (ev) => {
   if (ev.target.id === 'jumpGauge' && ev.target.value !== '') { $('jumpWire').value = calc.awgToMm(Number(ev.target.value)).toFixed(3); remember('jumpWire', $('jumpWire').value); }
   if (ev.target.id === 'jumpWire') { $('jumpGauge').value = ''; remember('jumpGauge', ''); }
   if (ev.target.id === 'rRecipe') fillRecipe(ev.target.value);
+  if (ev.target.id === 'fRecipe') fillFromOne(ev.target.value);
+  if (['fGold', 'fSilver', 'fCopper'].includes(ev.target.id)) { $('fRecipe').value = 'custom'; remember('fRecipe', 'custom'); }
   if (ev.target.id === 'cFromPreset') usePurityPreset(ev.target.value, 'cFrom');
   if (ev.target.id === 'cToPreset') usePurityPreset(ev.target.value, 'cTo');
   if (ev.target.id === 'cFrom') { $('cFromPreset').value = ''; remember('cFromPreset', ''); }

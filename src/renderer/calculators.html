@@ -18,6 +18,7 @@
   <button data-panel="weight">Metal weight and cost</button>
   <button data-panel="alloy">Raise or lower purity</button>
   <button data-panel="recipe">Gold and silver alloys</button>
+  <button data-panel="fromone">Gold and silver recipe</button>
   <button data-panel="gauge">Gauge to mm chart</button>
   <button data-panel="units">Units</button>
   <p class="muted">Lengths in millimetres unless it says otherwise. Results are shown in inches too. What you type is remembered.</p>
@@ -211,6 +212,31 @@
         </div>
       </div>
       <div class="results" id="rOut"></div>
+    </div>
+  </section>
+
+  <section id="fromone" class="panel" hidden>
+    <h2>Gold and silver recipe</h2>
+    <p class="hint">Start from what you have. Choose a recipe, say which ingredient you have and how much, and the rest of the melt follows:
+      12 g of fine gold in the Kent Raible blend calls for 3.04 g of silver and 0.96 g of copper, making 16 g of 18k.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="fRecipe">Recipe</label>
+        <select id="fRecipe"></select>
+        <div class="row-3">
+          <div><label for="fGold">Gold <span class="muted">%</span></label><input type="number" id="fGold" min="0" max="100" step="0.1"></div>
+          <div><label for="fSilver">Silver <span class="muted">%</span></label><input type="number" id="fSilver" min="0" max="100" step="0.1"></div>
+          <div><label for="fCopper">Copper <span class="muted">%</span></label><input type="number" id="fCopper" min="0" max="100" step="0.1"></div>
+        </div>
+        <p class="muted">Change a percentage and the recipe becomes your own.</p>
+        <label for="fKnown">I have</label>
+        <div class="row-3">
+          <input type="number" id="fAmount" value="12" min="0" step="0.01" aria-label="Grams">
+          <select id="fKnown" aria-label="Of which ingredient"><option value="gold">g of fine gold</option><option value="silver">g of fine silver</option><option value="copper">g of copper</option></select>
+          <div></div>
+        </div>
+      </div>
+      <div class="results" id="fOut"></div>
     </div>
   </section>
 

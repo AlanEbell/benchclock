@@ -284,6 +284,20 @@ function alloyRecipe({ total, gold = 0, silver = 0, copper = 0 }) {
 }
 
 /**
+ * A recipe worked from one ingredient: you have `amount` grams of `known` (gold, silver or copper) and the
+ * recipe says what share that is, so the whole melt and the other ingredients follow.
+ */
+function recipeFromOne({ gold = 0, silver = 0, copper = 0, known, amount }) {
+  const parts = { gold: Number(gold) || 0, silver: Number(silver) || 0, copper: Number(copper) || 0 };
+  const sum = parts.gold + parts.silver + parts.copper;
+  const A = Number(amount);
+  if (!(sum > 0) || !(A > 0) || !(parts[known] > 0)) return null;
+  const total = A * sum / parts[known];
+  const g = round(total * parts.gold / sum, 3); const s = round(total * parts.silver / sum, 3); const c = round(total * parts.copper / sum, 3);
+  return { gold: g, silver: s, copper: c, total: round(total, 3), karat: round(24 * parts.gold / sum, 2), fineness: Math.round(1000 * (parts.gold + parts.silver) / sum), goldFineness: Math.round(1000 * parts.gold / sum) };
+}
+
+/**
  * Two lots of the same metal melted together: the purity of the melt (a fraction, 0 to 1), and how much of
  * lot B to add to lot A to reach a target purity. `purity` values are fractions: 18k is 0.75, sterling 0.925.
  */
@@ -315,7 +329,7 @@ const api = {
   INCH, TROY_OUNCE, PENNYWEIGHT, CARAT, SOLDER_ALLOWANCE, KNUCKLE_ALLOWANCE, METALS, LENGTH_UNITS, WEIGHT_UNITS, UK_LETTERS,
   round, ringDiameter, ringSizes, ringSizeChart, ukToIndex, indexToUk, blankLength, ellipsePerimeter, bezelStrip,
   awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, changePurity, PURITIES, GOLD_COLOURS, karatOf, convert,
-  RECIPES, recipeById, alloyRecipe, mixLots,
+  RECIPES, recipeById, alloyRecipe, recipeFromOne, mixLots,
 };
 if (typeof module !== 'undefined') module.exports = api;
 else window.calc = api; // the calculators window

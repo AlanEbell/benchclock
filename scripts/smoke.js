@@ -204,6 +204,10 @@ app.on('browser-window-created', (event, win) => {
       assert.match(await inCalc("return $('rOut').textContent"), /20 g comes out as16k.*add of lot B10\.000 g/);
       await new Promise((r) => setTimeout(r, 200));
       fs.writeFileSync(path.join(dataDir, 'calculators-alloys.png'), (await calcWin.webContents.capturePage()).toPNG());
+      await inCalc("document.querySelector('nav [data-panel=fromone]').click(); $('fRecipe').value = 'gold-18k-kent-raible'; $('fRecipe').dispatchEvent(new Event('change', { bubbles: true })); $('fKnown').value = 'gold'; $('fAmount').value = 12; recalc();");
+      assert.match(await inCalc("return $('fOut').textContent"), /12 g of fine gold in 18k kent raible blend.*Add fine silver3\.040 g.*Add copper0\.960 g.*Melted together you have16\.000 g.*18k, 750 fine gold/);
+      await new Promise((r) => setTimeout(r, 200));
+      fs.writeFileSync(path.join(dataDir, 'calculators-fromone.png'), (await calcWin.webContents.capturePage()).toPNG());
       await run("await api('openCalculators'); await new Promise((r) => setTimeout(r, 300));");
       assert.equal(BrowserWindow.getAllWindows().length, 3, 'asking again reuses the calculators window');
       console.log('SMOKE OK');

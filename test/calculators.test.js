@@ -132,6 +132,19 @@ test('alloy recipes and mixing lots', () => {
   assert.equal(c.mixLots({ weightA: 100, purityA: 0.925, weightB: 0, purityB: 1, target: 0.958 }).needB, 78.571);
 });
 
+test('a recipe worked from the one ingredient you have', () => {
+  // 12 g of fine gold in the Kent Raible blend: 16 g of 18k, with 3.04 g silver and 0.96 g copper
+  assert.deepEqual(c.recipeFromOne({ ...c.recipeById('gold-18k-kent-raible'), known: 'gold', amount: 12 }), { gold: 12, silver: 3.04, copper: 0.96, total: 16, karat: 18, fineness: 940, goldFineness: 750 });
+  // 3 g of silver in the same recipe fixes the rest
+  const fromSilver = c.recipeFromOne({ ...c.recipeById('gold-18k-kent-raible'), known: 'silver', amount: 3 });
+  assert.deepEqual([fromSilver.gold, fromSilver.copper, fromSilver.total], [11.842, 0.947, 15.789]);
+  // 7.5 g of copper for sterling needs 92.5 g of fine silver
+  assert.deepEqual(c.recipeFromOne({ ...c.recipeById('sterling'), known: 'copper', amount: 7.5 }).silver, 92.5);
+  // an ingredient the recipe has none of can't set the rest
+  assert.equal(c.recipeFromOne({ ...c.recipeById('sterling'), known: 'gold', amount: 5 }), null);
+  assert.equal(c.recipeFromOne({ gold: 75, silver: 25, copper: 0, known: 'gold', amount: 0 }), null);
+});
+
 test('units', () => {
   near(c.convert(1, 'in', 'mm', c.LENGTH_UNITS), 25.4, 0.0001);
   near(c.convert(31.1035, 'g', 'ozt', c.WEIGHT_UNITS), 1, 0.0001);
