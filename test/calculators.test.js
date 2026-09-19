@@ -87,6 +87,26 @@ test('alloying gold and silver', () => {
   assert.equal(c.karatOf(5, 8), 15);
 });
 
+test('alloy recipes and mixing lots', () => {
+  // 30 g of 18k yellow: 22.5 g gold, 3.75 silver, 3.75 copper
+  assert.deepEqual(c.alloyRecipe({ total: 30, ...c.recipeById('gold-18k-yellow') }), { gold: 22.5, silver: 3.75, copper: 3.75, total: 30, karat: 18, fineness: 875, goldFineness: 750 });
+  const sterling = c.alloyRecipe({ total: 100, ...c.recipeById('sterling') });
+  assert.deepEqual([sterling.silver, sterling.copper, sterling.fineness, sterling.karat], [92.5, 7.5, 925, 0]);
+  // percentages that don't add to 100 are scaled
+  assert.deepEqual(c.alloyRecipe({ total: 10, gold: 3, silver: 1, copper: 0 }).gold, 7.5);
+  assert.equal(c.alloyRecipe({ total: 10, gold: 0, silver: 0, copper: 0 }), null);
+  assert.ok(c.RECIPES.every((r) => Math.abs(r.gold + r.silver + r.copper - 100) < 0.01), 'every recipe adds to 100');
+  // 10 g of 18k with 10 g of 14k is 20 g of 16k
+  const mix = c.mixLots({ weightA: 10, purityA: 0.75, weightB: 10, purityB: 14 / 24 });
+  assert.deepEqual([mix.total, mix.purity, mix.fine], [20, 0.6667, 13.333]);
+  // to bring 10 g of 18k down to 16k with 14k, add 10 g of it; to reach 14k with 14k is meaningless; 20k is out of reach
+  assert.equal(c.mixLots({ weightA: 10, purityA: 0.75, weightB: 0, purityB: 14 / 24, target: 16 / 24 }).needB, 10);
+  assert.equal(c.mixLots({ weightA: 10, purityA: 0.75, weightB: 0, purityB: 14 / 24, target: 14 / 24 }).needB, null);
+  assert.equal(c.mixLots({ weightA: 10, purityA: 0.75, weightB: 0, purityB: 14 / 24, target: 20 / 24 }).needB, null);
+  // fine silver into sterling scrap to reach 958: 100 g at .925 needs 100 x (0.925 - 0.958) / (0.958 - 1) = 78.57 g of fine
+  assert.equal(c.mixLots({ weightA: 100, purityA: 0.925, weightB: 0, purityB: 1, target: 0.958 }).needB, 78.571);
+});
+
 test('units', () => {
   near(c.convert(1, 'in', 'mm', c.LENGTH_UNITS), 25.4, 0.0001);
   near(c.convert(31.1035, 'g', 'ozt', c.WEIGHT_UNITS), 1, 0.0001);

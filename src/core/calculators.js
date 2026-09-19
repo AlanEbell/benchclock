@@ -216,6 +216,58 @@ function alloySilver({ fineSilver, fineness = 925 }) {
   return { alloy: round(total - Number(fineSilver), 3), total: round(total, 3) };
 }
 
+/**
+ * Alloy recipes, as percentages of the whole melt. The gold and silver figures are the usual
+ * ones for the colour; makers and suppliers vary them, and white golds need nickel or palladium
+ * (and are best bought as master alloy), so they aren't here. Zinc in small amounts is left out too.
+ */
+const RECIPES = [
+  { id: 'gold-22k', name: '22k yellow gold', gold: 91.7, silver: 5, copper: 3.3 },
+  { id: 'gold-18k-yellow', name: '18k yellow gold', gold: 75, silver: 12.5, copper: 12.5 },
+  { id: 'gold-18k-rose', name: '18k rose gold', gold: 75, silver: 5, copper: 20 },
+  { id: 'gold-18k-red', name: '18k red gold', gold: 75, silver: 0, copper: 25 },
+  { id: 'gold-18k-green', name: '18k green gold', gold: 75, silver: 25, copper: 0 },
+  { id: 'gold-14k-yellow', name: '14k yellow gold', gold: 58.5, silver: 20.5, copper: 21 },
+  { id: 'gold-14k-rose', name: '14k rose gold', gold: 58.5, silver: 9, copper: 32.5 },
+  { id: 'gold-14k-red', name: '14k red gold', gold: 58.5, silver: 0, copper: 41.5 },
+  { id: 'gold-10k-yellow', name: '10k yellow gold', gold: 41.7, silver: 29, copper: 29.3 },
+  { id: 'gold-9k-yellow', name: '9k yellow gold', gold: 37.5, silver: 31, copper: 31.5 },
+  { id: 'sterling', name: 'Sterling silver (925)', gold: 0, silver: 92.5, copper: 7.5 },
+  { id: 'britannia', name: 'Britannia silver (958)', gold: 0, silver: 95.8, copper: 4.2 },
+  { id: 'continental', name: 'Continental silver (800)', gold: 0, silver: 80, copper: 20 },
+  { id: 'shibuichi', name: 'Shibuichi (Japanese, 25% silver)', gold: 0, silver: 25, copper: 75 },
+  { id: 'shakudo', name: 'Shakudo (Japanese, 4% gold)', gold: 4, silver: 0, copper: 96 },
+  { id: 'custom', name: 'Your own recipe', gold: 75, silver: 12.5, copper: 12.5 },
+];
+const recipeById = (id) => RECIPES.find((r) => r.id === id) || null;
+
+/** Grams of each metal to melt `total` grams to a recipe given in percentages (they needn't add to 100; they are scaled). */
+function alloyRecipe({ total, gold = 0, silver = 0, copper = 0 }) {
+  const parts = [Number(gold) || 0, Number(silver) || 0, Number(copper) || 0];
+  const sum = parts.reduce((a, b) => a + b, 0);
+  if (!(sum > 0) || !(Number(total) > 0)) return null;
+  const [g, s, c] = parts.map((p) => round(Number(total) * p / sum, 3));
+  const goldShare = parts[0] / sum;
+  return { gold: g, silver: s, copper: c, total: round(g + s + c, 3), karat: round(24 * goldShare, 2), fineness: Math.round(1000 * (parts[0] + parts[1]) / sum), goldFineness: Math.round(1000 * goldShare) };
+}
+
+/**
+ * Two lots of the same metal melted together: the purity of the melt (a fraction, 0 to 1), and how much of
+ * lot B to add to lot A to reach a target purity. `purity` values are fractions: 18k is 0.75, sterling 0.925.
+ */
+function mixLots({ weightA, purityA, weightB, purityB, target }) {
+  const Wa = Number(weightA) || 0; const Wb = Number(weightB) || 0; const Pa = Number(purityA) || 0; const Pb = Number(purityB) || 0;
+  const total = Wa + Wb;
+  const purity = total > 0 ? (Wa * Pa + Wb * Pb) / total : 0;
+  let needB = null; // grams of B to bring A to the target
+  if (target !== undefined && target !== null && Wa > 0 && Pa !== Pb) {
+    const T = Number(target);
+    const between = (T - Pa) * (T - Pb) <= 0;
+    needB = between && T !== Pb ? round(Wa * (Pa - T) / (T - Pb), 3) : null;
+  }
+  return { total: round(total, 3), purity: round(purity, 4), fine: round(total * purity, 3), needB };
+}
+
 /** What karat a piece is from its gold content: 5 g of gold in 8 g of metal is 15k. */
 const karatOf = (goldGrams, totalGrams) => round(24 * Number(goldGrams) / Number(totalGrams), 1);
 
@@ -231,6 +283,7 @@ const api = {
   INCH, TROY_OUNCE, PENNYWEIGHT, CARAT, SOLDER_ALLOWANCE, KNUCKLE_ALLOWANCE, METALS, LENGTH_UNITS, WEIGHT_UNITS, UK_LETTERS,
   round, ringDiameter, ringSizes, ringSizeChart, ukToIndex, indexToUk, blankLength, ellipsePerimeter, bezelStrip,
   awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, alloyGold, alloySilver, karatOf, convert,
+  RECIPES, recipeById, alloyRecipe, mixLots,
 };
 if (typeof module !== 'undefined') module.exports = api;
 else window.calc = api; // the calculators window

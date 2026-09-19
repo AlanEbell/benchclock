@@ -17,6 +17,7 @@
   <button data-panel="jump">Jump rings</button>
   <button data-panel="weight">Metal weight and cost</button>
   <button data-panel="alloy">Karat and alloy</button>
+  <button data-panel="recipe">Gold and silver alloys</button>
   <button data-panel="gauge">Gauge to mm chart</button>
   <button data-panel="units">Units</button>
   <p class="muted">Lengths in millimetres unless it says otherwise. Results are shown in inches too. What you type is remembered.</p>
@@ -162,6 +163,40 @@
         <input type="number" id="aFineness" value="925" min="1" max="999" step="1">
       </div>
       <div class="results" id="aOut"></div>
+    </div>
+  </section>
+
+  <section id="recipe" class="panel" hidden>
+    <h2>Gold and silver alloys</h2>
+    <p class="hint">Melt an alloy from fine metals by recipe, or melt two lots of different purity together. The recipes are the usual
+      ones for each colour; makers vary them. White golds need nickel or palladium master alloy and aren't here.</p>
+    <div class="grid">
+      <div class="inputs">
+        <h3>Melt an alloy from fine metals</h3>
+        <label for="rRecipe">Alloy</label>
+        <select id="rRecipe"></select>
+        <label for="rTotal">Weight to make <span class="muted">grams</span></label>
+        <input type="number" id="rTotal" value="30" min="0" step="0.1">
+        <div class="row-3">
+          <div><label for="rGold">Gold <span class="muted">%</span></label><input type="number" id="rGold" min="0" max="100" step="0.1"></div>
+          <div><label for="rSilver">Silver <span class="muted">%</span></label><input type="number" id="rSilver" min="0" max="100" step="0.1"></div>
+          <div><label for="rCopper">Copper <span class="muted">%</span></label><input type="number" id="rCopper" min="0" max="100" step="0.1"></div>
+        </div>
+        <p class="muted">Change a percentage and the recipe becomes your own. They needn't add to 100: the weight is shared in proportion.</p>
+
+        <h3>Melt two lots together</h3>
+        <label for="rUnit">Purity given as</label>
+        <select id="rUnit"><option value="karat">Karat (gold, of 24)</option><option value="fineness">Fineness (silver, of 1000)</option><option value="percent">Percent</option></select>
+        <div class="row-3">
+          <div><label for="rWa">Lot A <span class="muted">grams</span></label><input type="number" id="rWa" value="10" min="0" step="0.01"></div>
+          <div><label for="rPa">Purity of A</label><input type="number" id="rPa" value="18" min="0" step="any"></div>
+          <div></div>
+          <div><label for="rWb">Lot B <span class="muted">grams</span></label><input type="number" id="rWb" value="10" min="0" step="0.01"></div>
+          <div><label for="rPb">Purity of B</label><input type="number" id="rPb" value="14" min="0" step="any"></div>
+          <div><label for="rTarget">Purity wanted <span class="muted">optional</span></label><input type="number" id="rTarget" value="" min="0" step="any" placeholder="e.g. 16"></div>
+        </div>
+      </div>
+      <div class="results" id="rOut"></div>
     </div>
   </section>
 

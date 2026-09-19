@@ -142,6 +142,43 @@ function alloy() {
     line('Add copper (or alloy)', `${silver.alloy.toFixed(3)} g`, 'big') + line(`Makes ${num('aFineness') || 925} fine silver weighing`, `${silver.total.toFixed(3)} g`);
 }
 
+function recipeList() {
+  $('rRecipe').innerHTML = calc.RECIPES.map((r) => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  $('rRecipe').value = 'gold-18k-yellow';
+}
+function fillRecipe(id) {
+  const r = calc.recipeById(id);
+  if (!r || id === 'custom') return;
+  $('rGold').value = r.gold; $('rSilver').value = r.silver; $('rCopper').value = r.copper;
+  for (const f of ['rGold', 'rSilver', 'rCopper']) remember(f, $(f).value);
+}
+const PURITY = { karat: 24, fineness: 1000, percent: 100 };
+function recipe() {
+  const made = calc.alloyRecipe({ total: num('rTotal'), gold: num('rGold'), silver: num('rSilver'), copper: num('rCopper') });
+  const name = calc.recipeById($('rRecipe').value);
+  let out = head(`To melt ${num('rTotal')} g of ${esc(name ? name.name.toLowerCase() : 'alloy')}`);
+  if (!made) out += bad('Type a weight and at least one percentage.');
+  else {
+    out += (made.gold ? line('Fine gold', `${made.gold.toFixed(3)} g`, 'big') : '') + (made.silver ? line('Fine silver', `${made.silver.toFixed(3)} g`, 'big') : '') +
+      (made.copper ? line('Copper', `${made.copper.toFixed(3)} g`, 'big') : '') +
+      line('Comes out as', made.gold ? `${made.karat}k, ${made.goldFineness} fine gold` : `${made.fineness} fine silver`);
+  }
+  const unit = $('rUnit').value; const scale = PURITY[unit];
+  const label = (p) => (unit === 'karat' ? `${(p * 24).toFixed(2).replace(/\.?0+$/, '')}k` : unit === 'fineness' ? `${Math.round(p * 1000)} fine` : `${(p * 100).toFixed(1)}%`);
+  const mix = calc.mixLots({ weightA: num('rWa'), purityA: num('rPa') / scale, weightB: num('rWb'), purityB: num('rPb') / scale, target: $('rTarget').value === '' ? null : num('rTarget') / scale });
+  out += head('Two lots melted together');
+  if (num('rPa') > scale || num('rPb') > scale || num('rTarget') > scale) out += bad(`Purity can't be more than ${scale} here.`);
+  else if (!(mix.total > 0)) out += bad('Type the weights of the lots.');
+  else {
+    out += line(`${mix.total} g comes out as`, label(mix.purity), 'big') + line('Fine metal in it', `${mix.fine.toFixed(3)} g`);
+    if ($('rTarget').value !== '') {
+      out += mix.needB !== null ? line(`To bring lot A to ${label(num('rTarget') / scale)}, add of lot B`, `${mix.needB.toFixed(3)} g`, 'big') + line('Making', `${(num('rWa') + mix.needB).toFixed(3)} g`) :
+        bad('That purity can\'t be reached: it has to lie between the two lots\' purities.');
+    }
+  }
+  $('rOut').innerHTML = out;
+}
+
 function gauge() {
   const g = num('gGauge');
   const mmIn = num('gMm');
@@ -168,14 +205,16 @@ function units() {
 
 // ---- wiring ---------------------------------------------------------------
 
-const ALL = [ringBlank, bangle, bezel, jump, weight, alloy, gauge, units];
+const ALL = [ringBlank, bangle, bezel, jump, weight, alloy, recipe, gauge, units];
 function recalc() { for (const fn of ALL) fn(); }
 
 ringChart();
 gaugeChart();
 jumpGaugeList();
 metalLists();
+recipeList();
 restore();
+if (remembered('rGold') === null) fillRecipe($('rRecipe').value);
 document.addEventListener('input', (ev) => {
   if (ev.target.id) remember(ev.target.id, ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value);
   recalc();
@@ -183,6 +222,8 @@ document.addEventListener('input', (ev) => {
 document.addEventListener('change', (ev) => {
   if (ev.target.id === 'jumpGauge' && ev.target.value !== '') { $('jumpWire').value = calc.awgToMm(Number(ev.target.value)).toFixed(3); remember('jumpWire', $('jumpWire').value); }
   if (ev.target.id === 'jumpWire') { $('jumpGauge').value = ''; remember('jumpGauge', ''); }
+  if (ev.target.id === 'rRecipe') fillRecipe(ev.target.value);
+  if (['rGold', 'rSilver', 'rCopper'].includes(ev.target.id)) { $('rRecipe').value = 'custom'; remember('rRecipe', 'custom'); }
   recalc();
 });
 recalc();
