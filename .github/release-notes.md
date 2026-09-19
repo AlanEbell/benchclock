@@ -19,3 +19,5 @@ BenchClock isn't signed with a paid certificate yet, so your computer will ask w
 Updating is installing the new version over the old one. Your time card is kept separately and is not touched.
 
 Inside the app, **Help > BenchClock Help** (F1) explains everything, and **Help > About BenchClock** shows the version you have.
+
+To put a price on your finished pieces, install [BenchPrice](https://github.com/AlanEbell/benchprice/releases/latest) alongside: it reads this time card and adds metal, stones and findings.

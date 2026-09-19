@@ -33,6 +33,7 @@
     <a href="#adjust">Adjusting time by hand</a>
     <a href="#reports">Reports and exports</a>
     <a href="#data">Where your data lives, and backing it up</a>
+    <a href="#benchprice">BenchPrice: putting a price on the pieces</a>
     <a href="#menu">The menu and keyboard shortcuts</a>
     <a href="#questions">Questions and fixes</a>
   </nav>
@@ -117,7 +118,8 @@
     <p>You never type a number for it. It simply receives what is left. It can't be finished, renamed or deleted, and its
       <b class="ui">Log</b> button shows every session that contributed to it.</p>
     <p>It matters for pricing. The report shows what share of your clocked time is making and what share is TimeOverhead,
-      which tells you how much the unpaid hours add to the true cost of a piece.</p>
+      which tells you how much the unpaid hours add to the true cost of a piece. <a href="#benchprice">BenchPrice</a> uses that
+      share to load your hourly rate.</p>
   </section>
 
   <section id="pieces">
@@ -287,6 +289,21 @@
     </ul>
   </section>
 
+  <section id="benchprice">
+    <h2>BenchPrice: putting a price on the pieces</h2>
+    <p>BenchClock keeps time; it doesn't do prices. <b>BenchPrice</b> is a separate, free app from the same place that does. Install it
+      alongside BenchClock and it reads your time card: every finished piece with its making time, and the TimeOverhead share.
+      For each piece you enter the metal and its weight in grams, and the stones, findings and anything else bought in at what you
+      paid. It works out a price three ways (cost-plus, an hourly rate loaded with your TimeOverhead, and materials marked up by
+      cost band), lets you set a price of your own instead, and writes the price you confirm into the piece's file.</p>
+    <ul>
+      <li>Pieces made together (<i>Moonstone ring &times;3</i>) are one set there and carry one price.</li>
+      <li>BenchPrice keeps its files in a <code>pricing</code> folder inside BenchClock's data folder and never changes BenchClock's own files,
+        so backing up the folder backs up both.</li>
+      <li>Finish a piece here, then press <kbd>F5</kbd> in BenchPrice to see it.</li>
+    </ul>
+    <p>Download it from <code>github.com/AlanEbell/benchprice</code>.</p>
+  </section>
   <section id="menu">
     <h2>The menu and keyboard shortcuts</h2>
     <table>

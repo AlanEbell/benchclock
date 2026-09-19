@@ -24,6 +24,10 @@ photos/<hash>.jpg        photo library; 512 px square JPEGs
 current_session.json     exists only while clocked in: { id, clock_in }
 ```
 
+[BenchPrice](https://github.com/AlanEbell/benchprice) keeps its files in `pricing/` inside this
+folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchClock never reads or
+writes `pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
+
 All timestamps are ISO 8601 local time with UTC offset, to the second:
 `2026-09-17T14:05:00-04:00`. All durations are seconds.
 

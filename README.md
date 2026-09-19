@@ -38,6 +38,15 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
 
 All data is plain files on your own computer; see [DATA_FORMAT.md](DATA_FORMAT.md).
 
+## BenchPrice, for putting a price on the pieces
+
+[BenchPrice](https://github.com/AlanEbell/benchprice) is a separate app that works alongside
+BenchClock. BenchClock knows how long each piece took and what share of your clocked time is
+TimeOverhead; BenchPrice adds the metal by weight at today's spot price, the stones and findings
+at what you paid, and works out a price three ways for each finished piece. It reads BenchClock's
+data folder and keeps its own files in a `pricing` folder inside it, never touching BenchClock's
+own files, so one backup covers both. Install BenchClock first, then BenchPrice.
+
 ## Development
 
 Needs [Node.js](https://nodejs.org) 22 or newer.
