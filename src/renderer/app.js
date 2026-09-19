@@ -574,6 +574,7 @@ $('reportPresets').onclick = (ev) => {
 };
 $('repFrom').oninput = $('repTo').oninput = updateReport;
 $('reportBtn').onclick = openReport;
+$('calcBtn').onclick = () => api('openCalculators');
 $('reportCancel').onclick = () => $('reportDlg').close();
 
 async function saveReport(method) {

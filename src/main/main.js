@@ -17,6 +17,7 @@ const dataDirArg = process.argv.find((arg) => arg.startsWith('--data-dir='));
 let card;
 let mainWindow;
 let helpWindow;
+let calcWindow;
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'bench-photo', privileges: { secure: true } }]);
 
@@ -167,6 +168,7 @@ const api = {
 
   openDataFolder: () => { shell.openPath(card.dataDir); },
   openHelp: () => { openHelp(); },
+  openCalculators: () => { openCalculators(); },
   openHomepage: () => { shell.openExternal(homepage); },
 };
 
@@ -211,6 +213,26 @@ function openHelp() {
   helpWindow.loadFile(path.join(__dirname, '..', 'renderer', 'help.html'));
 }
 
+/** The bench calculators (ring blanks, bezels, jump rings, metal weight...), in a window of their own. Plain page, no access to the time card. */
+function openCalculators() {
+  if (calcWindow) {
+    if (calcWindow.isMinimized()) calcWindow.restore();
+    calcWindow.show();
+    calcWindow.focus();
+    return;
+  }
+  calcWindow = new BrowserWindow({
+    width: 980, height: 800, minWidth: 560, minHeight: 420, show: false,
+    title: 'BenchClock Calculators', backgroundColor: '#f5f1e8', icon: windowIcon(),
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  });
+  if (process.platform !== 'darwin') calcWindow.removeMenu();
+  calcWindow.once('ready-to-show', () => calcWindow.show());
+  calcWindow.on('closed', () => { calcWindow = null; });
+  stayOnPage(calcWindow);
+  calcWindow.loadFile(path.join(__dirname, '..', 'renderer', 'calculators.html'));
+}
+
 /** The menu bar. Entries that belong to the page are passed on to it (see app.js, menuActions). */
 function buildMenu() {
   const mac = process.platform === 'darwin';
@@ -253,6 +275,10 @@ function buildMenu() {
       ],
     },
     {
+      label: '&Tools',
+      submenu: [{ label: 'Calculators\u2026', accelerator: 'CmdOrCtrl+K', click: openCalculators }],
+    },
+    {
       label: '&Help', role: 'help',
       submenu: [{ label: 'BenchClock Help', accelerator: 'F1', click: openHelp }, ...(mac ? [] : [line, about])],
     },
@@ -270,7 +296,8 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.on('closed', () => {
     mainWindow = null;
-    if (helpWindow) helpWindow.destroy(); // the guide doesn't outlive the app
+    if (helpWindow) helpWindow.destroy(); // the guide and the calculators don't outlive the app
+    if (calcWindow) calcWindow.destroy();
   });
   stayOnPage(mainWindow);
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));

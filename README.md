@@ -33,6 +33,10 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
   (batches totalled with each piece listed beneath, the split between making and
   TimeOverhead, and for a range of days each piece's time to date alongside), or
   *Save as CSV* for a spreadsheet.
+- **Calculators** - a window of bench arithmetic (*Tools > Calculators*, Ctrl+K): ring blank
+  length with a size conversion chart, bangle and hoop cut length, bezel strip length, jump
+  ring wire, metal weight and cost in twenty metals, karat and alloy mixing, a gauge to mm
+  chart, and units. Modelled on the free calculators jewelry makers pass around online.
 - **Menu bar** - *Help* has a detailed guide (F1) and *About BenchClock*, which shows the
   version that is running.
 
@@ -58,6 +62,7 @@ Needs [Node.js](https://nodejs.org) 22 or newer.
     npm run dist              # build installers for this operating system into dist/
 
 - `src/core/timecard.js` - all time keeping and file handling. No interface.
+- `src/core/calculators.js` - the bench arithmetic behind the calculators window; pure, loaded by that page too.
 - `src/main/` - the Electron main process: window, menu bar, file dialogs, photo import, and
   the PDF report (`report.js` lays it out).
 - `src/renderer/` - the window itself: HTML, CSS, and the icon set in `icons.js`.

@@ -166,6 +166,30 @@ app.on('browser-window-created', (event, win) => {
       assert.match(guide.webContents.getURL(), /help\.html$/);
       await run("await api('openHelp'); await new Promise((r) => setTimeout(r, 300));");
       assert.equal(BrowserWindow.getAllWindows().length, 2, 'asking again reuses the window');
+
+      // the calculators: their own window, arithmetic loaded, a ring blank worked out
+      const toolsMenu = Menu.getApplicationMenu().items.find((item) => item.label === '&Tools').submenu.items.map((item) => item.label);
+      assert.deepEqual(toolsMenu, ['Calculators\u2026']);
+      await run("await api('openCalculators'); await new Promise((r) => setTimeout(r, 1200));");
+      const calcWin = BrowserWindow.getAllWindows().find((w) => w.getTitle() === 'BenchClock Calculators');
+      assert.ok(calcWin, 'the calculators open in their own window');
+      const inCalc = (js) => calcWin.webContents.executeJavaScript(`(async () => { ${js} })()`, true);
+      assert.equal(await inCalc('return typeof calc.blankLength'), 'function');
+      await inCalc("$('ringSize').value = '7'; $('ringThick').value = '1.5'; $('ringAllow').value = '1.5'; recalc();");
+      assert.match(await inCalc("return $('ringOut').textContent"), /Cut the stock to60\.49 mm/); // π × (17.28 + 1.5) + 1.5
+      fs.writeFileSync(path.join(dataDir, 'calculators.png'), (await calcWin.webContents.capturePage()).toPNG());
+      assert.match(await inCalc("return $('ringOut').textContent"), /UK and AustraliaN½/);
+      assert.equal(await inCalc("return $('ringChart').querySelectorAll('tr.now').length"), 1, 'the chart marks the size');
+      await inCalc("document.querySelector('nav [data-panel=gauge]').click(); $('gGauge').value = '18'; recalc();");
+      assert.match(await inCalc("return $('gOut').textContent"), /18 gauge is1\.024 mm/);
+      assert.equal(await inCalc("return $('gaugeChart').querySelectorAll('tr[data-g]').length"), 37);
+      assert.equal(await inCalc("return $('ring').hidden && !$('gauge').hidden"), true);
+      await inCalc("document.querySelector('nav [data-panel=weight]').click(); $('wShape').value = 'sheet'; $('wLength').value = 50; $('wWidth').value = 20; $('wThick').value = 1; $('wMetal').value = 'sterling'; recalc();");
+      assert.match(await inCalc("return $('wOut').textContent"), /Weight10\.36 g/);
+      await new Promise((r) => setTimeout(r, 200));
+      fs.writeFileSync(path.join(dataDir, 'calculators-weight.png'), (await calcWin.webContents.capturePage()).toPNG());
+      await run("await api('openCalculators'); await new Promise((r) => setTimeout(r, 300));");
+      assert.equal(BrowserWindow.getAllWindows().length, 3, 'asking again reuses the calculators window');
       console.log('SMOKE OK');
     } catch (error) {
       console.error('SMOKE FAILED\n', error);

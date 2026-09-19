@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BenchClock Calculators</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="calculators.css">
+</head>
+<body class="calc">
+<nav aria-label="Calculators">
+  <h1>Calculators</h1>
+  <button data-panel="ring" aria-pressed="true">Ring blank</button>
+  <button data-panel="bangle">Bangle or hoop</button>
+  <button data-panel="bezel">Bezel strip</button>
+  <button data-panel="jump">Jump rings</button>
+  <button data-panel="weight">Metal weight and cost</button>
+  <button data-panel="alloy">Karat and alloy</button>
+  <button data-panel="gauge">Gauge to mm chart</button>
+  <button data-panel="units">Units</button>
+  <p class="muted">Lengths in millimetres unless it says otherwise. Results are shown in inches too. What you type is remembered.</p>
+</nav>
+
+<main>
+  <section id="ring" class="panel">
+    <h2>Ring blank length</h2>
+    <p class="hint">Bent metal keeps its length along the middle of its thickness, so a band needs &pi; &times; (inside diameter + thickness) of stock,
+      plus a little to file the ends true for a tight solder joint.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="ringSystem">Size system</label>
+        <select id="ringSystem">
+          <option value="us">US and Canada</option><option value="uk">UK, Australia (letters)</option><option value="eu">EU, ISO (circumference mm)</option>
+          <option value="jp">Japan</option><option value="mm">Inside diameter in mm</option>
+        </select>
+        <label for="ringSize">Ring size</label>
+        <input type="text" id="ringSize" value="7" inputmode="decimal">
+        <label for="ringThick">Metal thickness <span class="muted">mm</span></label>
+        <input type="number" id="ringThick" value="1.5" min="0" step="0.05">
+        <label for="ringWidth">Band width <span class="muted">mm</span></label>
+        <input type="number" id="ringWidth" value="4" min="0" step="0.5">
+        <label class="check"><input type="checkbox" id="ringKnuckle"> Wide band: add room to pass the knuckle <span class="muted">(about half a size, for bands over 6 mm)</span></label>
+        <label for="ringAllow">Allowance for filing and the joint <span class="muted">mm</span></label>
+        <input type="number" id="ringAllow" value="1.5" min="0" step="0.1">
+      </div>
+      <div class="results" id="ringOut"></div>
+    </div>
+    <h3>Ring size conversion chart</h3>
+    <table class="chart" id="ringChart"></table>
+    <p class="muted">Sizes in the chart are the usual equivalents; makers' charts differ by up to a quarter size.</p>
+  </section>
+
+  <section id="bangle" class="panel" hidden>
+    <h2>Bangle or hoop cut length</h2>
+    <p class="hint">The same arithmetic as a ring blank, for anything round made from stock: a bangle, a hoop earring, a large jump ring.
+      Bangles are usually 60 mm (small), 65 mm (medium) or 70 mm (large) inside.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="bangleD">Inside diameter <span class="muted">mm</span></label>
+        <input type="number" id="bangleD" value="65" min="0" step="0.5">
+        <label for="bangleT">Stock thickness <span class="muted">mm, the wire or sheet</span></label>
+        <input type="number" id="bangleT" value="2" min="0" step="0.05">
+        <label for="bangleAllow">Allowance for filing and the joint <span class="muted">mm</span></label>
+        <input type="number" id="bangleAllow" value="1.5" min="0" step="0.1">
+      </div>
+      <div class="results" id="bangleOut"></div>
+    </div>
+  </section>
+
+  <section id="bezel" class="panel" hidden>
+    <h2>Bezel strip length</h2>
+    <p class="hint">The stone's perimeter, plus &pi; &times; the bezel's thickness because the outside of the bend travels farther than the inside,
+      plus a little overlap for the joint. Ovals use Ramanujan's approximation.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="bezelShape">Stone shape</label>
+        <select id="bezelShape">
+          <option value="round">Round</option><option value="oval">Oval</option><option value="rectangle">Rectangle or square</option><option value="freeform">Freeform (measured around)</option>
+        </select>
+        <div data-for="round oval rectangle"><label for="bezelL"><span id="bezelLLabel">Diameter</span> <span class="muted">mm</span></label><input type="number" id="bezelL" value="10" min="0" step="0.1"></div>
+        <div data-for="oval rectangle"><label for="bezelW">Width <span class="muted">mm</span></label><input type="number" id="bezelW" value="8" min="0" step="0.1"></div>
+        <div data-for="freeform"><label for="bezelP">Perimeter <span class="muted">mm, a strip of paper or thread wrapped round the stone</span></label><input type="number" id="bezelP" value="30" min="0" step="0.1"></div>
+        <label for="bezelT">Bezel thickness <span class="muted">mm</span></label>
+        <input type="number" id="bezelT" value="0.3" min="0" step="0.05">
+        <label for="bezelOverlap">Overlap for the joint <span class="muted">mm</span></label>
+        <input type="number" id="bezelOverlap" value="1" min="0" step="0.1">
+      </div>
+      <div class="results" id="bezelOut"></div>
+    </div>
+  </section>
+
+  <section id="jump" class="panel" hidden>
+    <h2>Jump ring wire</h2>
+    <p class="hint">Wire per ring is the circumference measured along the middle of the wire: &pi; &times; (mandrel + wire). Rings spring back a
+      little after cutting, so the inside ends up 0.1 to 0.2 mm larger than the mandrel.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="jumpMandrel">Mandrel diameter <span class="muted">mm, the inside of the ring</span></label>
+        <input type="number" id="jumpMandrel" value="4" min="0" step="0.1">
+        <label for="jumpGauge">Wire gauge <span class="muted">AWG</span></label>
+        <select id="jumpGauge"></select>
+        <label for="jumpWire">Wire diameter <span class="muted">mm, from the gauge or typed</span></label>
+        <input type="number" id="jumpWire" value="1.024" min="0" step="0.001">
+        <label for="jumpCount">How many rings</label>
+        <input type="number" id="jumpCount" value="50" min="1" step="1">
+        <label for="jumpWaste">Waste <span class="muted">%, for the saw cut and mistakes</span></label>
+        <input type="number" id="jumpWaste" value="10" min="0" step="1">
+      </div>
+      <div class="results" id="jumpOut"></div>
+    </div>
+  </section>
+
+  <section id="weight" class="panel" hidden>
+    <h2>Metal weight and cost</h2>
+    <p class="hint">Volume of the stock times the metal's density. Alloys vary a little by maker.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="wMetal">Metal</label>
+        <select id="wMetal"></select>
+        <label for="wShape">Stock</label>
+        <select id="wShape">
+          <option value="sheet">Sheet</option><option value="round-wire">Round wire</option><option value="half-round">Half-round wire</option>
+          <option value="square-wire">Square wire</option><option value="rect-wire">Rectangular wire</option><option value="tube">Tube</option>
+          <option value="disc">Disc</option><option value="ring">Ring band</option>
+        </select>
+        <div data-for="sheet round-wire half-round square-wire rect-wire tube"><label for="wLength">Length <span class="muted">mm</span></label><input type="number" id="wLength" value="50" min="0" step="0.1"></div>
+        <div data-for="sheet rect-wire square-wire ring"><label for="wWidth"><span id="wWidthLabel">Width</span> <span class="muted">mm</span></label><input type="number" id="wWidth" value="20" min="0" step="0.1"></div>
+        <div data-for="sheet rect-wire disc ring"><label for="wThick">Thickness <span class="muted">mm</span></label><input type="number" id="wThick" value="1" min="0" step="0.05"></div>
+        <div data-for="round-wire half-round tube disc ring"><label for="wDiam"><span id="wDiamLabel">Diameter</span> <span class="muted">mm</span></label><input type="number" id="wDiam" value="1" min="0" step="0.05"></div>
+        <div data-for="tube"><label for="wWall">Wall thickness <span class="muted">mm</span></label><input type="number" id="wWall" value="0.5" min="0" step="0.05"></div>
+        <label for="wPrice">Price of the metal <span class="muted">$ per gram, optional</span></label>
+        <input type="number" id="wPrice" value="" min="0" step="0.01" placeholder="0">
+        <label for="wSameIn">The same piece made in</label>
+        <select id="wSameIn"></select>
+      </div>
+      <div class="results" id="wOut"></div>
+    </div>
+  </section>
+
+  <section id="alloy" class="panel" hidden>
+    <h2>Karat and alloy</h2>
+    <p class="hint">Karat is gold in 24 parts: 18k is 18/24, or 75% gold. To lower the karat, add alloy; to raise it, add fine gold.</p>
+    <div class="grid">
+      <div class="inputs">
+        <h3>Change the karat of some gold</h3>
+        <label for="aWeight">You have <span class="muted">grams</span></label>
+        <input type="number" id="aWeight" value="10" min="0" step="0.01">
+        <label for="aKarat">of karat</label>
+        <input type="number" id="aKarat" value="24" min="1" max="24" step="1">
+        <label for="aTarget">and want karat</label>
+        <input type="number" id="aTarget" value="14" min="1" max="24" step="1">
+        <h3>What karat is it?</h3>
+        <label for="aGold">Gold in it <span class="muted">grams</span></label>
+        <input type="number" id="aGold" value="7.5" min="0" step="0.01">
+        <label for="aTotal">Total weight <span class="muted">grams</span></label>
+        <input type="number" id="aTotal" value="10" min="0" step="0.01">
+        <h3>Sterling from fine silver</h3>
+        <label for="aSilver">Fine silver <span class="muted">grams</span></label>
+        <input type="number" id="aSilver" value="92.5" min="0" step="0.01">
+        <label for="aFineness">Fineness wanted <span class="muted">parts per thousand: 925 sterling, 935 Argentium, 800 continental</span></label>
+        <input type="number" id="aFineness" value="925" min="1" max="999" step="1">
+      </div>
+      <div class="results" id="aOut"></div>
+    </div>
+  </section>
+
+  <section id="gauge" class="panel" hidden>
+    <h2>Gauge to mm chart</h2>
+    <p class="hint">American Wire Gauge, also called Brown &amp; Sharpe, is what jewellery suppliers in North America use for wire and sheet alike.
+      A higher number is thinner. Each step is about 11% thinner; six steps halves the thickness.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="gGauge">Gauge to mm</label>
+        <input type="number" id="gGauge" value="18" min="0" max="40" step="1">
+        <label for="gMm">mm to the nearest gauge</label>
+        <input type="number" id="gMm" value="0.8" min="0" step="0.01">
+      </div>
+      <div class="results" id="gOut"></div>
+    </div>
+    <table class="chart" id="gaugeChart"></table>
+  </section>
+
+  <section id="units" class="panel" hidden>
+    <h2>Units</h2>
+    <div class="grid">
+      <div class="inputs">
+        <h3>Length</h3>
+        <div class="row-3">
+          <input type="number" id="uLenValue" value="1" step="any" aria-label="Length">
+          <select id="uLenFrom" aria-label="From"><option value="mm">mm</option><option value="cm">cm</option><option value="in" selected>inches</option></select>
+          <select id="uLenTo" aria-label="To"><option value="mm" selected>mm</option><option value="cm">cm</option><option value="in">inches</option></select>
+        </div>
+        <h3>Weight</h3>
+        <div class="row-3">
+          <input type="number" id="uWtValue" value="1" step="any" aria-label="Weight">
+          <select id="uWtFrom" aria-label="From"><option value="g">grams</option><option value="dwt">pennyweight</option><option value="ozt" selected>troy ounces</option><option value="oz">ounces (avoirdupois)</option><option value="ct">carats</option></select>
+          <select id="uWtTo" aria-label="To"><option value="g" selected>grams</option><option value="dwt">pennyweight</option><option value="ozt">troy ounces</option><option value="oz">ounces (avoirdupois)</option><option value="ct">carats</option></select>
+        </div>
+      </div>
+      <div class="results" id="uOut"></div>
+    </div>
+    <h3>Worth knowing</h3>
+    <table class="chart">
+      <tr><td>1 inch</td><td>25.4 mm</td></tr>
+      <tr><td>1 troy ounce</td><td>31.1035 g, 20 pennyweight</td></tr>
+      <tr><td>1 pennyweight (dwt)</td><td>1.5552 g</td></tr>
+      <tr><td>1 carat</td><td>0.2 g, 100 points</td></tr>
+      <tr><td>1 ounce (avoirdupois, kitchen scales)</td><td>28.35 g, which is 0.911 troy ounces</td></tr>
+    </table>
+  </section>
+</main>
+<script src="../core/calculators.js"></script>
+<script src="calculators.js"></script>
+</body>
+</html>
