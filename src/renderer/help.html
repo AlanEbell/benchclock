@@ -273,29 +273,116 @@
   <section id="calculators">
     <h2>Calculators</h2>
     <p><b class="ui">Calculators</b> at the top of the window, or <b class="ui">Tools &rsaquo; Calculators</b> (<kbd>Ctrl</kbd> + <kbd>K</kbd>), opens a window of bench
-      arithmetic that can sit beside the app. Everything recalculates as you type, and what you typed is there again next time. Lengths are in
-      millimetres, with inches alongside.</p>
-    <table>
-      <tr><th>Calculator</th><th>What it does</th></tr>
-      <tr><td><b class="ui">Ring blank</b></td><td>The length of stock to cut for a ring of a given size, in US, UK, EU or Japanese sizes or a diameter. Measured along the
-        middle of the metal (&pi; &times; (inside diameter + thickness)) plus 1.5 mm to file the ends true. Wide bands can add room for the knuckle. With a
-        conversion chart of every size in every system.</td></tr>
-      <tr><td><b class="ui">Bangle or hoop</b></td><td>The same for anything round made from stock: a bangle, a hoop earring.</td></tr>
-      <tr><td><b class="ui">Bezel strip</b></td><td>Strip length for a round, oval, rectangular or freeform stone: the perimeter, plus the bend in the metal, plus overlap for the joint.</td></tr>
-      <tr><td><b class="ui">Jump rings</b></td><td>Wire needed for a number of rings on a mandrel, from the wire gauge, with waste; also the inside and outside diameters and the aspect ratio.</td></tr>
-      <tr><td><b class="ui">Metal weight and cost</b></td><td>The weight of sheet, wire, tube, a disc or a ring band in any of twenty metals, in grams, pennyweight and troy ounces, its cost at a
-        price per gram, and what the same piece would weigh in another metal.</td></tr>
-      <tr><td><b class="ui">Raise or lower purity</b></td><td>You have sterling and want 980, coin silver and want sterling, 14k and want 18k, or the other way: how much fine metal or
-        copper to add to what you have, and what you have once it is melted together. Going down in karat, the alloy you add is silver and copper
-        in the split you choose (Kent Raible blend, yellow, rose, red, green, or your own, as percentages of the finished metal). In karat, fineness or percent. And what purity a piece is from its fine content.</td></tr>
-      <tr><td><b class="ui">Gold and silver alloys</b></td><td>Grams of fine gold, fine silver and copper to melt for a weight of 22k, 18k (yellow, Kent Raible blend, rose, red, green) or 14k in yellow, rose or red, 10k, 9k, sterling,
-        Britannia, continental silver, shibuichi or shakudo, or a recipe of your own; and what two lots of different purity come out as when melted together, with how much of one to add to the other to reach a purity.</td></tr>
-      <tr><td><b class="ui">Gold and silver recipe</b></td><td>The same recipes worked from what you have: say how many grams of fine gold, fine silver or copper you have, and it
-        gives the other ingredients and the weight of the melt.</td></tr>
-      <tr><td><b class="ui">Gauge to mm chart</b></td><td>American (Brown &amp; Sharpe) wire and sheet gauge to millimetres and inches, 0 to 36, and the other way round.</td></tr>
-      <tr><td><b class="ui">Units</b></td><td>Millimetres, centimetres and inches; grams, pennyweight, troy ounces, ounces and carats.</td></tr>
-    </table>
-    <p>They are guides, not gospel: makers' ring charts differ by up to a quarter size, and alloys vary by supplier. Cut long and file to fit.</p>
+      arithmetic that can sit beside the app. Pick a calculator from the list on the left. Everything recalculates as you type, and what you typed is
+      there again next time. Lengths are in millimetres, with inches alongside; weights are in grams.</p>
+    <div class="note">They are guides, not gospel. Makers' ring charts differ by up to a quarter size, alloys vary by supplier, and metal is lost to the
+      saw and the crucible. Cut long and file to fit; melt a little more than you need.</div>
+
+    <h3>Ring blank</h3>
+    <p>The length of stock to cut for a ring of a given size.</p>
+    <ul>
+      <li><b>Asks:</b> the size system (US, UK letters, EU, Japan, or an inside diameter in mm), the size, the metal's thickness, the band's width,
+        whether to add room for the knuckle, and the allowance for filing and the joint (1.5 mm to start).</li>
+      <li><b>How it works:</b> bent metal keeps its length along the middle of its thickness, so the stock needed is &pi; &times; (inside diameter + thickness),
+        plus the allowance so the ends can be filed true for a tight solder joint. A band over 6 mm wide has to pass the knuckle, so ticking the box adds
+        0.4 mm to the diameter, about half a size.</li>
+      <li><b>Gives:</b> the cut length, the length along the middle, the inside diameter and circumference, and the same size in every other system.
+        The chart underneath lists US 1 to 16 in half sizes against diameter, circumference, UK, EU and Japanese sizes, with your size marked.</li>
+      <li><b>Example:</b> a US 7 in 1.5 mm stock is 17.28 mm inside; &pi; &times; 18.78 = 58.99 mm, plus 1.5, so cut 60.5 mm.</li>
+    </ul>
+
+    <h3>Bangle or hoop</h3>
+    <p>The same arithmetic for anything round made from stock: a bangle, a hoop earring, a large jump ring.</p>
+    <ul>
+      <li><b>Asks:</b> the inside diameter, the stock's thickness (the wire's diameter or the sheet's thickness), and the allowance.</li>
+      <li><b>Gives:</b> the cut length, the inside circumference and the outside diameter. Bangles are usually 60 mm (small), 65 mm (medium) or 70 mm (large) inside.</li>
+      <li><b>Example:</b> a 65 mm bangle in 2 mm wire: &pi; &times; 67 = 210.5 mm, plus 1.5, so cut 212 mm.</li>
+    </ul>
+
+    <h3>Bezel strip</h3>
+    <p>How long a strip of bezel to cut for a stone.</p>
+    <ul>
+      <li><b>Asks:</b> the stone's shape and measurements: diameter for a round stone, length and width for an oval or a rectangle, or the measured perimeter of a freeform
+        stone (wrap a strip of paper or thread around it and measure that). Then the bezel's thickness and the overlap you like for the joint.</li>
+      <li><b>How it works:</b> the stone's perimeter (an oval's by Ramanujan's approximation, which is good to a hair), plus &pi; &times; the bezel's thickness because the
+        outside of the bend travels farther than the inside, plus the overlap.</li>
+      <li><b>Gives:</b> the cut length, and the perimeter with and without the bend. For a rectangle the corners are bent, not counted; a bezel that turns sharp corners is
+        usually made in pieces and soldered.</li>
+      <li><b>Example:</b> a 10 mm round cabochon in 0.3 mm bezel: 31.42 + 0.94 + 1 = 33.4 mm.</li>
+    </ul>
+
+    <h3>Jump rings</h3>
+    <p>How much wire to wind for a batch of jump rings.</p>
+    <ul>
+      <li><b>Asks:</b> the mandrel's diameter (the inside of the ring), the wire gauge (or its diameter in mm), how many rings, and a waste allowance for the saw cut and mistakes.</li>
+      <li><b>How it works:</b> each ring takes &pi; &times; (mandrel + wire diameter) of wire, measured along the middle of the wire. Rings spring back a little after cutting, so the
+        inside ends up 0.1 to 0.2 mm larger than the mandrel.</li>
+      <li><b>Gives:</b> the total wire in mm, inches and feet, wire per ring, inside and outside diameters, the aspect ratio (inside diameter divided by wire diameter; under about
+        2.8 a ring is too tight to link with another of its own size, and chain maille weaves each want their own), and rings per inch of coil.</li>
+      <li><b>Example:</b> 50 rings of 18 gauge (1.024 mm) on a 4 mm mandrel with 10% waste: 15.78 mm each, 868 mm in all, about 34 inches.</li>
+    </ul>
+
+    <h3>Metal weight and cost</h3>
+    <p>What a piece of stock weighs, and costs, in any metal.</p>
+    <ul>
+      <li><b>Asks:</b> the metal (twenty, from fine silver to platinum, brass and titanium), the kind of stock (sheet, round, half-round, square or rectangular wire, tube, disc, or a
+        ring band) and its measurements, a price per gram if you want the cost, and another metal to compare with.</li>
+      <li><b>How it works:</b> the stock's volume times the metal's density. Densities are the usual figures; alloys vary a little by maker.</li>
+      <li><b>Gives:</b> the weight in grams, pennyweight and troy ounces, the cost, the volume and density, and what the same piece would weigh in the other metal (in proportion to the
+        densities: a ring that is 10 g in sterling is 15 g in 18k).</li>
+      <li><b>Example:</b> a 50 &times; 20 &times; 1 mm sheet of sterling is 1000 mm&sup3;, which is 10.36 g.</li>
+    </ul>
+
+    <h3>Raise or lower purity</h3>
+    <p>You have some metal and want it purer or less pure: sterling to 980, coin silver to sterling, 14k to 18k, 18k down to 14k.</p>
+    <ul>
+      <li><b>Asks:</b> what you have (fine silver, Britannia, sterling, coin silver, continental silver, 24k to 9k gold, or a purity you type), how much of it, and what you want.
+        Purities can be given in fineness (of 1000), karat (of 24) or percent; picking from the list switches the unit to match.</li>
+      <li><b>How it works:</b> going up, fine metal is added; going down, alloy is added. For silver the alloy is copper. For gold going down in karat, the alloy is silver
+        and copper in a split you choose: <b class="ui">Kent Raible blend</b> (19 silver to 6 copper in 18k), yellow, pale yellow, rose, red, green, or your own, entered as
+        percentages of the finished metal. Only the ratio of the two matters, so they needn't add to exactly the alloy share.</li>
+      <li><b>Gives:</b> how much to add (fine silver and copper separately for gold), what you have once it is all melted together, the fine metal in it, and for gold what the
+        finished metal is made of. Where you started from something that already had alloy in it, such as 22k, that part is named as "whatever alloy was in the 22k", since its
+        make-up isn't known.</li>
+      <li><b>Examples:</b> 100 g of sterling to 980: add 275 g of fine silver, giving 375 g. 50 g of coin silver to sterling: add 16.67 g of fine silver, giving 66.67 g.
+        75 g of fine gold to 18k Kent Raible blend: add 19 g of fine silver and 6 g of copper, giving 100 g.</li>
+      <li>Nothing added to sterling makes it pure: that takes refining, and the calculator says so. The <b>What purity is it?</b> box underneath turns fine metal and total
+        weight into karat, fineness and percent.</li>
+    </ul>
+
+    <h3>Gold and silver alloys</h3>
+    <p>Melt an alloy from fine metals, or melt two lots of different purity together.</p>
+    <ul>
+      <li><b>Melt an alloy from fine metals</b> asks for a recipe and the weight to make, and gives the grams of fine gold, fine silver and copper to melt. The recipes are
+        22k yellow; 18k yellow, Kent Raible blend, rose, red and green; 14k yellow, rose and red; 10k and 9k yellow; sterling 925, Britannia 958 and continental 800; and the
+        Japanese shibuichi and shakudo. Change any percentage and the recipe becomes your own; the percentages needn't add to 100, the weight is shared in proportion. White
+        golds need nickel or palladium master alloy and aren't here.</li>
+      <li><b>Melt two lots together</b> asks for two weights and their purities (karat, fineness or percent) and gives what the melt comes out as and how much fine metal is
+        in it. Type a purity you want and it says how much of lot B to add to lot A to reach it, or tells you when it can't be reached because the target isn't between the two.</li>
+      <li><b>Examples:</b> 30 g of 18k yellow is 22.5 g of gold, 3.75 of silver and 3.75 of copper. 10 g of 18k and 10 g of 14k melt to 20 g of 16k.</li>
+    </ul>
+
+    <h3>Gold and silver recipe</h3>
+    <p>The same recipes worked from what you have.</p>
+    <ul>
+      <li><b>Asks:</b> a recipe, and how many grams of one ingredient you have: fine gold, fine silver or copper.</li>
+      <li><b>How it works:</b> the recipe says what share that ingredient is of the whole, so the whole follows, and so do the other ingredients.</li>
+      <li><b>Gives:</b> the other ingredients to add, the weight of the melt, and what it is.</li>
+      <li><b>Example:</b> 12 g of fine gold in the 18k Kent Raible blend calls for 3.04 g of fine silver and 0.96 g of copper, making 16 g of 18k.</li>
+    </ul>
+
+    <h3>Gauge to mm chart</h3>
+    <p>American Wire Gauge, also called Brown &amp; Sharpe, is what jewellery suppliers in North America use for wire and sheet alike. A higher number is thinner;
+      each step is about 11% thinner, and six steps halves the thickness.</p>
+    <ul>
+      <li><b>Asks:</b> a gauge to turn into millimetres, and a measurement in millimetres to find the nearest gauge for.</li>
+      <li><b>Gives:</b> both, and a chart of every gauge from 0 to 36 in millimetres and inches with what each is typically used for, your gauge marked.</li>
+      <li><b>Example:</b> 18 gauge is 1.024 mm; 0.8 mm is nearest to 20 gauge (0.812 mm).</li>
+    </ul>
+
+    <h3>Units</h3>
+    <p>Millimetres, centimetres and inches; grams, pennyweight, troy ounces, ordinary ounces and carats. Type a number, pick from and to. Underneath are the figures worth
+      knowing by heart: an inch is 25.4 mm, a troy ounce 31.1035 g or 20 pennyweight, a carat 0.2 g, and a kitchen-scale ounce is 28.35 g, only 0.911 troy ounces.</p>
   </section>
   <section id="data">
     <h2>Where your data lives, and backing it up</h2>
