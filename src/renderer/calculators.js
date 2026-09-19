@@ -127,19 +127,43 @@ function weight() {
     (other ? line(`In ${esc(calc.metalById(other).name)}`, `${calc.sameIn(w.grams, $('wMetal').value, other).toFixed(2)} g`) : '');
 }
 
+const UNIT_SCALE = { karat: 24, fineness: 1000, percent: 100 };
+function purityLists() {
+  const options = (chosen) => '<option value="">Type it below</option>' + calc.PURITIES.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  $('cFromPreset').innerHTML = options();
+  $('cToPreset').innerHTML = options();
+  $('cFromPreset').value = 'silver-925';
+  $('cToPreset').value = '';
+}
+/** A preset picked: its purity goes in the box in the unit chosen (switching the unit to the preset's own if it makes sense). */
+function usePurityPreset(presetId, numberField) {
+  const p = calc.PURITIES.find((x) => x.id === presetId);
+  if (!p) return;
+  if ($('cUnit').value !== 'percent' && $('cUnit').value !== p.unit) { $('cUnit').value = p.unit; remember('cUnit', p.unit); }
+  const scale = UNIT_SCALE[$('cUnit').value];
+  $(numberField).value = Number((p.purity * scale).toFixed(scale === 24 ? 2 : 1));
+  remember(numberField, $(numberField).value);
+}
 function alloy() {
-  const gold = calc.alloyGold({ weight: num('aWeight'), karat: num('aKarat'), target: num('aTarget') });
-  const k = calc.karatOf(num('aGold'), num('aTotal'));
-  const silver = calc.alloySilver({ fineSilver: num('aSilver'), fineness: num('aFineness') || 925 });
-  $('aOut').innerHTML = head('Change the karat') +
-    (Number.isFinite(gold.amount) && num('aKarat') <= 24 && num('aTarget') <= 24 && num('aTarget') > 0 ?
-      line(`Add ${gold.add}`, `${gold.amount.toFixed(3)} g`, 'big') + line(`Makes ${num('aTarget')}k weighing`, `${gold.total.toFixed(3)} g`) + line('Fine gold in it', `${gold.gold.toFixed(3)} g`) :
-      bad('Karats run from 1 to 24.')) +
-    head('What karat is it') +
-    (num('aTotal') > 0 && num('aGold') <= num('aTotal') ? line('Karat', `${k}k`, 'big') + line('Gold content', `${(100 * num('aGold') / num('aTotal')).toFixed(1)}%, ${Math.round(1000 * num('aGold') / num('aTotal'))} fine`) :
-      bad('The gold can\'t weigh more than the whole piece.')) +
-    head('Sterling from fine silver') +
-    line('Add copper (or alloy)', `${silver.alloy.toFixed(3)} g`, 'big') + line(`Makes ${num('aFineness') || 925} fine silver weighing`, `${silver.total.toFixed(3)} g`);
+  const unit = $('cUnit').value; const scale = UNIT_SCALE[unit];
+  const show = (p) => (unit === 'karat' ? `${Number((p * 24).toFixed(2))}k` : unit === 'fineness' ? `${Math.round(p * 1000)} fine` : `${Number((p * 100).toFixed(1))}%`);
+  const nameOf = (presetField, p) => { const preset = calc.PURITIES.find((x) => x.id === $(presetField).value); return preset ? preset.name.toLowerCase() : `${show(p)} metal`; };
+  const P = num('cFrom') / scale; const T = num('cTo') / scale;
+  const fineName = num('cTo') > 0 && (unit === 'karat' ? 'fine gold' : unit === 'fineness' ? 'fine silver' : 'fine metal');
+  let out = head(`${num('cAmount')} g of ${esc(nameOf('cFromPreset', P))} to ${show(T)}`);
+  const r = calc.changePurity({ have: num('cAmount'), purity: P, target: T });
+  if (num('cFrom') > scale || num('cTo') > scale) out += bad(`Purity can't be more than ${scale} here.`);
+  else if (!r) out += bad(T === 1 && P < 1 ? 'Nothing added to it will make it pure: that takes refining.' : T === 0 ? 'A purity of 0 is just copper.' : 'Type the amount and both purities.');
+  else if (r.amount === 0) out += line('Nothing to add', 'it is that already');
+  else {
+    out += line(`Add ${r.add === 'fine' ? fineName : 'copper (or alloy)'}`, `${r.amount.toFixed(3)} g`, 'big') +
+      line(`Melted together you have ${show(T)} weighing`, `${r.total.toFixed(3)} g`, 'big') + line('Fine metal in it', `${r.fine.toFixed(3)} g`);
+  }
+  out += head('What purity is it');
+  const share = num('aTotal') > 0 ? num('aGold') / num('aTotal') : NaN;
+  out += num('aTotal') > 0 && share <= 1 ? line('Purity', `${Number((share * 24).toFixed(2))}k, ${Math.round(share * 1000)} fine, ${Number((share * 100).toFixed(1))}%`, 'big') :
+    bad('The fine metal can\'t weigh more than the whole piece.');
+  $('aOut').innerHTML = out;
 }
 
 function recipeList() {
@@ -213,6 +237,7 @@ gaugeChart();
 jumpGaugeList();
 metalLists();
 recipeList();
+purityLists();
 restore();
 if (remembered('rGold') === null) fillRecipe($('rRecipe').value);
 document.addEventListener('input', (ev) => {
@@ -223,6 +248,11 @@ document.addEventListener('change', (ev) => {
   if (ev.target.id === 'jumpGauge' && ev.target.value !== '') { $('jumpWire').value = calc.awgToMm(Number(ev.target.value)).toFixed(3); remember('jumpWire', $('jumpWire').value); }
   if (ev.target.id === 'jumpWire') { $('jumpGauge').value = ''; remember('jumpGauge', ''); }
   if (ev.target.id === 'rRecipe') fillRecipe(ev.target.value);
+  if (ev.target.id === 'cFromPreset') usePurityPreset(ev.target.value, 'cFrom');
+  if (ev.target.id === 'cToPreset') usePurityPreset(ev.target.value, 'cTo');
+  if (ev.target.id === 'cFrom') { $('cFromPreset').value = ''; remember('cFromPreset', ''); }
+  if (ev.target.id === 'cTo') { $('cToPreset').value = ''; remember('cToPreset', ''); }
+  if (ev.target.id === 'cUnit') { for (const [preset, field] of [['cFromPreset', 'cFrom'], ['cToPreset', 'cTo']]) if ($(preset).value) usePurityPreset($(preset).value, field); }
   if (['rGold', 'rSilver', 'rCopper'].includes(ev.target.id)) { $('rRecipe').value = 'custom'; remember('rRecipe', 'custom'); }
   recalc();
 });

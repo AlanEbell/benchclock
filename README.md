@@ -35,7 +35,8 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
   *Save as CSV* for a spreadsheet.
 - **Calculators** - a window of bench arithmetic (*Tools > Calculators*, Ctrl+K): ring blank
   length with a size conversion chart, bangle and hoop cut length, bezel strip length, jump
-  ring wire, metal weight and cost in twenty metals, karat and alloy mixing, alloy recipes
+  ring wire, metal weight and cost in twenty metals, raising or lowering the purity of metal
+  you have (sterling to 980, coin silver to sterling, 14k to 18k), alloy recipes
   for coloured golds and silvers and melting lots together, a gauge to mm chart, and units. Modelled on the free calculators jewelry makers pass around online.
 - **Menu bar** - *Help* has a detailed guide (F1) and *About BenchClock*, which shows the
   version that is running.

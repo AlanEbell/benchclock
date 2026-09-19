@@ -198,23 +198,37 @@ function sameIn(grams, fromMetal, toMetal) {
 
 // ----- alloying -----------------------------------------------------------
 
-/** Gold: what to add to `weight` grams of `karat` gold to reach `target` karat. Alloy lowers, fine gold raises. */
-function alloyGold({ weight, karat, target }) {
-  const W = Number(weight); const K = Number(karat); const T = Number(target);
-  const gold = W * K / 24;
-  if (T <= K) {
-    const total = T > 0 ? gold * 24 / T : Infinity;
-    return { add: 'alloy', amount: round(total - W, 3), total: round(total, 3), gold: round(gold, 3) };
-  }
-  const fine = T < 24 ? W * (T - K) / (24 - T) : Infinity;
-  return { add: 'fine gold', amount: round(fine, 3), total: round(W + fine, 3), gold: round(gold + fine, 3) };
+/**
+ * You have `have` grams of metal at `purity` and want it at `target`. Purities are fractions (sterling
+ * 0.925, 18k 0.75). To go up, fine metal (purity 1) is added; to go down, copper or alloy (purity 0).
+ * Returns what to add, how much, and what the melt comes to.
+ */
+function changePurity({ have, purity, target }) {
+  const P = Number(purity); const T = Number(target); const W = Number(have);
+  if (!(P >= 0 && P <= 1 && T >= 0 && T <= 1) || !(W > 0)) return null;
+  const up = T > P;
+  const Q = up ? 1 : 0; // the purity of what gets added
+  const add = up ? 'fine' : 'copper';
+  if (T === P) return { add, amount: 0, total: round(W, 3), fine: round(W * T, 3) };
+  if (T === Q) return null; // nothing added to sterling makes it pure, and nothing makes it plain copper
+  const amount = W * (T - P) / (Q - T);
+  return { add, amount: round(amount, 3), total: round(W + amount, 3), fine: round((W + amount) * T, 3) };
 }
 
-/** Fine silver to sterling: 7.5% copper. `fineness` is per mille, 925 for sterling. */
-function alloySilver({ fineSilver, fineness = 925 }) {
-  const total = Number(fineSilver) * 1000 / Number(fineness);
-  return { alloy: round(total - Number(fineSilver), 3), total: round(total, 3) };
-}
+/** Purities people start from, as fractions. */
+const PURITIES = [
+  { id: 'silver-999', name: 'Fine silver (999)', unit: 'fineness', purity: 0.999 },
+  { id: 'silver-958', name: 'Britannia silver (958)', unit: 'fineness', purity: 0.958 },
+  { id: 'silver-925', name: 'Sterling silver (925)', unit: 'fineness', purity: 0.925 },
+  { id: 'silver-900', name: 'Coin silver (900)', unit: 'fineness', purity: 0.9 },
+  { id: 'silver-800', name: 'Continental silver (800)', unit: 'fineness', purity: 0.8 },
+  { id: 'gold-24', name: '24k gold', unit: 'karat', purity: 1 },
+  { id: 'gold-22', name: '22k gold', unit: 'karat', purity: 22 / 24 },
+  { id: 'gold-18', name: '18k gold', unit: 'karat', purity: 0.75 },
+  { id: 'gold-14', name: '14k gold', unit: 'karat', purity: 14 / 24 },
+  { id: 'gold-10', name: '10k gold', unit: 'karat', purity: 10 / 24 },
+  { id: 'gold-9', name: '9k gold', unit: 'karat', purity: 9 / 24 },
+];
 
 /**
  * Alloy recipes, as percentages of the whole melt. The gold and silver figures are the usual
@@ -282,7 +296,7 @@ function convert(value, from, to, units) {
 const api = {
   INCH, TROY_OUNCE, PENNYWEIGHT, CARAT, SOLDER_ALLOWANCE, KNUCKLE_ALLOWANCE, METALS, LENGTH_UNITS, WEIGHT_UNITS, UK_LETTERS,
   round, ringDiameter, ringSizes, ringSizeChart, ukToIndex, indexToUk, blankLength, ellipsePerimeter, bezelStrip,
-  awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, alloyGold, alloySilver, karatOf, convert,
+  awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, changePurity, PURITIES, karatOf, convert,
   RECIPES, recipeById, alloyRecipe, mixLots,
 };
 if (typeof module !== 'undefined') module.exports = api;

@@ -188,6 +188,12 @@ app.on('browser-window-created', (event, win) => {
       assert.match(await inCalc("return $('wOut').textContent"), /Weight10\.36 g/);
       await new Promise((r) => setTimeout(r, 200));
       fs.writeFileSync(path.join(dataDir, 'calculators-weight.png'), (await calcWin.webContents.capturePage()).toPNG());
+      await inCalc("document.querySelector('nav [data-panel=alloy]').click(); $('cUnit').value = 'fineness'; $('cFromPreset').value = 'silver-900'; $('cFromPreset').dispatchEvent(new Event('change', { bubbles: true })); $('cToPreset').value = 'silver-925'; $('cToPreset').dispatchEvent(new Event('change', { bubbles: true })); $('cAmount').value = 50; recalc();");
+      assert.match(await inCalc("return $('aOut').textContent"), /50 g of coin silver \(900\) to 925 fine.*Add fine silver16\.667 g.*you have 925 fine weighing66\.667 g/);
+      await inCalc("$('cAmount').value = 100; $('cFrom').value = 925; $('cFrom').dispatchEvent(new Event('change', { bubbles: true })); $('cTo').value = 980; $('cTo').dispatchEvent(new Event('change', { bubbles: true })); recalc();");
+      assert.match(await inCalc("return $('aOut').textContent"), /Add fine silver275\.000 g/);
+      await new Promise((r) => setTimeout(r, 200));
+      fs.writeFileSync(path.join(dataDir, 'calculators-purity.png'), (await calcWin.webContents.capturePage()).toPNG());
       await inCalc("document.querySelector('nav [data-panel=recipe]').click(); $('rRecipe').value = 'gold-18k-rose'; $('rRecipe').dispatchEvent(new Event('change', { bubbles: true })); $('rTotal').value = 20; $('rTarget').value = 16; recalc();");
       assert.match(await inCalc("return $('rOut').textContent"), /Fine gold15\.000 g.*Fine silver1\.000 g.*Copper4\.000 g.*18k, 750 fine gold/);
       assert.match(await inCalc("return $('rOut').textContent"), /20 g comes out as16k.*add of lot B10\.000 g/);
