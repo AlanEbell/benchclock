@@ -21,12 +21,14 @@ items/<id>.json          one file per piece, or per batch made together
 items/time-overhead.json TimeOverhead: clocked time that was not given to a piece
 sessions/<stamp>-<id>.json   one file per completed clock-in / clock-out
 photos/<hash>.jpg        photo library; 512 px square JPEGs
-current_session.json     exists only while clocked in: { id, clock_in }
+current_session.json     exists only while clocked in: { id, clock_in, breaks }
 ```
 
 [BenchPrice](https://github.com/AlanEbell/benchprice) keeps its files in `pricing/` inside this
 folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchClock never reads or
 writes `pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
+BenchPrice changes one thing outside `pricing/`: a piece sent back to the bench there has its `status`
+and `finished_at` set as BenchClock's own Reopen would set them.
 
 All timestamps are ISO 8601 local time with UTC offset, to the second:
 `2026-09-17T14:05:00-04:00`. All durations are seconds.
@@ -57,6 +59,9 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 Each `time_entries[]` entry: `session_id`, `clock_in`, `clock_out`, `percent` (share of
 that session, 0-100), `seconds` (session length x percent).
 
+An entry from a session with breaks in it also carries `break_seconds`, the length of the breaks.
+`seconds` is always time worked: the session from `clock_in` to `clock_out`, less its breaks, x percent.
+
 An entry may also carry `kind` and `note`. `kind` is `"adjustment"` for time put on by hand
 (work done before BenchClock, a forgotten clock-in, a share corrected after the fact) rather than
 by clocking out. For an adjustment `clock_in` and `clock_out` are both the day the work belongs
@@ -76,6 +81,12 @@ in proportion to their quantities.
 `id`, `clock_in`, `clock_out`, `seconds`, and `allocations`: an array of
 `{ item_id, name, quantity, percent }`. Percentages always total 100; the part not
 given to a piece appears as the `time-overhead` entry.
+
+`seconds` is the time worked: `clock_out` minus `clock_in`, less the breaks. `breaks` is an array of
+`{ start, end }` timestamps, one for each time the clock was paused, and `break_seconds` is their
+total. Time on a break is not given to any piece, nor to TimeOverhead. Both fields are missing in
+files from before the clock could be paused: treat as no breaks. In `current_session.json` a break
+still running has `end` null.
 
 ## CSV export
 

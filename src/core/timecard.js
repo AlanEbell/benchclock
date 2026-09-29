@@ -10,7 +10,7 @@
  *     items/time-overhead.json  the catch-all for time not spent making
  *     sessions/<session>.json   one file per completed clock-in/clock-out
  *     photos/<hash>.jpg         the photo library: pictures that can stand in for a piece's icon
- *     current_session.json      present only while clocked in
+ *     current_session.json      present only while clocked in; holds the breaks taken so far
  */
 
 const crypto = require('node:crypto');
@@ -108,6 +108,18 @@ function asDate(when) {
   const date = when instanceof Date ? when : new Date(when);
   if (Number.isNaN(date.getTime())) throw new TimeCardError(`Couldn't understand the time '${when}'.`);
   return date;
+}
+
+/**
+ * Seconds of a session spent on breaks, counting only what falls between `start` and `end`.
+ * A break still running (no `end` of its own) lasts until `end`.
+ */
+function breakSeconds(breaks, start, end) {
+  return (breaks || []).reduce((sum, b) => {
+    const from = Math.max(new Date(b.start), start);
+    const to = Math.min(b.end ? new Date(b.end) : end, end);
+    return sum + Math.max(to - from, 0) / 1000;
+  }, 0);
 }
 
 /**
@@ -413,10 +425,38 @@ class TimeCard {
     fs.rmSync(this.sessionFile, { force: true });
   }
 
+  /** Stop the clock for a break. The session stays open; time on a break is not logged anywhere. */
+  pauseClock(when) {
+    const session = this.currentSession();
+    if (!session) throw new TimeCardError('You are not clocked in.');
+    const breaks = session.breaks || [];
+    if (breaks.some((b) => !b.end)) throw new TimeCardError('The clock is already paused.');
+    const at = asDate(when);
+    const last = breaks.length ? breaks[breaks.length - 1].end : session.clock_in;
+    if (at < new Date(last)) throw new TimeCardError('A break has to start after you clocked in.');
+    const paused = { ...session, breaks: [...breaks, { start: toIso(at), end: null }] };
+    writeJson(this.sessionFile, paused);
+    return paused;
+  }
+
+  /** Back from the break: the clock runs again. */
+  resumeClock(when) {
+    const session = this.currentSession();
+    if (!session) throw new TimeCardError('You are not clocked in.');
+    const open = (session.breaks || []).find((b) => !b.end);
+    if (!open) throw new TimeCardError('The clock is not paused.');
+    const at = asDate(when);
+    if (at < new Date(open.start)) throw new TimeCardError('A break has to end after it started.');
+    open.end = toIso(at);
+    writeJson(this.sessionFile, session);
+    return session;
+  }
+
   /**
    * Close the session, splitting its length across pieces. `allocations` maps
    * item id -> percent of the session. Whatever is left over, up to the full
-   * 100%, goes to TimeOverhead.
+   * 100%, goes to TimeOverhead. Breaks are left out of the length; a break still
+   * running ends with the session.
    */
   clockOut(allocations = {}, when) {
     const session = this.currentSession();
@@ -441,12 +481,17 @@ class TimeCard {
     if (overhead >= PERCENT_TOLERANCE) shares.set(OVERHEAD_ID, overhead);
 
     const items = new Map([...shares.keys()].map((id) => [id, this.getItem(id)])); // fails before anything is saved
-    const duration = (end - start) / 1000;
+    // Breaks that ran past the clock-out time (it can be set back) are cut off there.
+    const breaks = (session.breaks || []).filter((b) => new Date(b.start) < end)
+      .map((b) => ({ start: b.start, end: b.end && new Date(b.end) < end ? b.end : toIso(end) }));
+    const onBreak = breakSeconds(breaks, start, end);
+    const duration = (end - start) / 1000 - onBreak;
     for (const [itemId, percent] of shares) {
       const item = items.get(itemId);
       item.time_entries.push({
         session_id: session.id, clock_in: session.clock_in, clock_out: toIso(end),
         percent: round2(percent), seconds: round1(duration * percent / 100),
+        ...(onBreak ? { break_seconds: round1(onBreak) } : {}),
       });
       if (item.status === NOT_STARTED) item.status = IN_PROGRESS;
       if (!item.started_at) item.started_at = session.clock_in;
@@ -454,7 +499,7 @@ class TimeCard {
     }
 
     const record = {
-      ...session, clock_out: toIso(end), seconds: round1(duration),
+      ...session, clock_out: toIso(end), seconds: round1(duration), breaks, break_seconds: round1(onBreak),
       allocations: [...shares].map(([itemId, percent]) => ({
         item_id: itemId, name: items.get(itemId).name, quantity: items.get(itemId).quantity, percent: round2(percent),
       })),
@@ -519,7 +564,7 @@ class TimeCard {
 }
 
 module.exports = {
-  TimeCard, TimeCardError, labelItems, formatDuration, toIso, defaultDataDir,
+  TimeCard, TimeCardError, labelItems, formatDuration, toIso, defaultDataDir, breakSeconds,
   checkPeriod, inPeriod, narrowItem, narrowItems, sessionIds, sessionCount,
   NOT_STARTED, IN_PROGRESS, FINISHED, OVERHEAD, OVERHEAD_ID, OVERHEAD_NAME, ADJUSTMENT,
   PIECE_TYPES, DEFAULT_TYPE, CSV_FIELDS, SCHEMA_VERSION,

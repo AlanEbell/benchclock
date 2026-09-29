@@ -50,6 +50,20 @@ app.on('browser-window-created', (event, win) => {
       assert.equal(await run("return state.items.filter((i) => i.status === 'finished').length"), 2);
       assert.equal(await run("return !!document.querySelector('#bench .row:not(.group) [data-act=finish]')"), true, 'single lines have a Finish button');
 
+      // a break: the clock stands still, and nothing has to be filled in
+      await run("await api('clockIn');");
+      assert.deepEqual(await run("return [$('pauseBtn').hidden, $('pauseBtn').textContent]"), [false, 'Pause']);
+      await run("$('pauseBtn').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.deepEqual(await run("return [$('pauseBtn').textContent, $('clockState').textContent, $('clock').classList.contains('paused')]"), ['Resume', 'On a break', true]);
+      assert.equal(JSON.parse(fs.readFileSync(path.join(dataDir, 'current_session.json'), 'utf8')).breaks[0].end, null);
+      const frozen = await run("return $('timer').textContent");
+      await new Promise((r) => setTimeout(r, 2200));
+      assert.equal(await run("return $('timer').textContent"), frozen, 'the timer stands still on a break');
+      await run("$('pauseBtn').click(); await new Promise((r) => setTimeout(r, 300));");
+      assert.deepEqual(await run("return [$('pauseBtn').textContent, $('clockState').textContent]"), ['Pause', 'Clocked in']);
+      await run("await api('cancelSession');");
+      assert.equal(await run("return $('pauseBtn').hidden"), true);
+
       await run("await api('clockIn'); await openClockOut();");
       assert.equal(await run("return document.querySelectorAll('#allocRows [data-child-of]:not([hidden])').length"), 0, 'group starts closed');
       await run(`const g = document.querySelector('input[data-group]'); g.value = 50; g.dispatchEvent(new Event('input', { bubbles: true }));

@@ -6,6 +6,8 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
 ## Using it
 
 - **Clock in / Clock out** - one big button. Closing the window does not clock you out.
+- **Pause** - stops the clock for a break, with nothing to fill in. *Resume* starts it again.
+  Time on a break is not counted anywhere.
 - **Add a piece** - a name, a tap on what it is (earrings, ring, pendant...), done.
 - **Making several?** Set *How many*. They are listed as one line (`Moonstone ring x3`)
   with a `>` mark. Closed, it works as a batch: one number at clock-out is divided
@@ -50,8 +52,9 @@ All data is plain files on your own computer; see [DATA_FORMAT.md](DATA_FORMAT.m
 BenchClock. BenchClock knows how long each piece took and what share of your clocked time is
 TimeOverhead; BenchPrice adds the metal by weight at today's spot price, the stones and findings
 at what you paid, and works out a price three ways for each finished piece. It reads BenchClock's
-data folder and keeps its own files in a `pricing` folder inside it, never touching BenchClock's
-own files, so one backup covers both. Install BenchClock first, then BenchPrice.
+data folder and keeps its own files in a `pricing` folder inside it, so one backup covers both.
+The only change it makes to BenchClock's own files is sending a piece that was finished by mistake
+back to the bench, as *Reopen* does here. Install BenchClock first, then BenchPrice.
 
 ## Development
 

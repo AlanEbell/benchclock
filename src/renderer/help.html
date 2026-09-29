@@ -77,6 +77,12 @@
         still counting from when you clocked in.</li>
       <li><b class="ui">Clock out</b> opens the clock-out box, described <a href="#dividing">in the next section</a>.
         <b class="ui">Keep working</b> closes it without clocking out.</li>
+      <li><b class="ui">Pause</b> appears while you are clocked in. It stops the clock for a break: lunch, an errand, the
+        school run. There is nothing to fill in. The timer stands still and the panel says <i>On a break</i>. Press
+        <b class="ui">Resume</b> when you are back. You can pause as often as you like in one session.</li>
+      <li><b>A break is not counted as time.</b> It is left out of the session, so it goes to no piece and not to
+        TimeOverhead either. At clock-out you divide only the time you worked. If you clock out while paused, the break
+        ends there.</li>
       <li><b class="ui">Discard session</b> appears while you are clocked in. It throws the session away without logging any
         time. Use it if you clocked in by mistake.</li>
     </ul>
@@ -413,8 +419,10 @@
       cost band), lets you set a price of your own instead, and writes the price you confirm into the piece's file.</p>
     <ul>
       <li>Pieces made together (<i>Moonstone ring &times;3</i>) are one set there and carry one price.</li>
-      <li>BenchPrice keeps its files in a <code>pricing</code> folder inside BenchClock's data folder and never changes BenchClock's own files,
+      <li>BenchPrice keeps its files in a <code>pricing</code> folder inside BenchClock's data folder,
         so backing up the folder backs up both.</li>
+      <li><b class="ui">Not finished</b> there sends a piece that was finished by mistake back to the bench here, the same as
+        <b class="ui">Reopen</b>. It is the only change BenchPrice makes to your time card.</li>
       <li>Finish a piece here, then press <kbd>F5</kbd> in BenchPrice to see it.</li>
     </ul>
     <p>Download it from <code>github.com/AlanEbell/benchprice</code>.</p>

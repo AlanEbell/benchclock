@@ -289,3 +289,37 @@ test('narrowing to a period keeps whole-life totals and leaves all time alone', 
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('a break stops the clock and is left out of the session', () => {
+  const [ring] = card.addItem({ name: 'Moonstone ring' });
+  card.clockIn(start);
+  card.pauseClock(after(0.5));
+  assert.throws(() => card.pauseClock(after(0.6)), TimeCardError); // already paused
+  card.resumeClock(after(1));
+  assert.throws(() => card.resumeClock(after(1.1)), TimeCardError); // not paused
+  assert.throws(() => card.pauseClock(after(0.75)), TimeCardError); // inside the break before
+  const record = card.clockOut({ [ring.id]: 50 }, after(2));
+  assert.deepEqual([record.seconds, record.break_seconds, record.breaks.length], [5400, 1800, 1]);
+  const [entry] = card.getItem(ring.id).time_entries;
+  assert.deepEqual([entry.seconds, entry.break_seconds, entry.percent], [2700, 1800, 50]);
+  assert.equal(card.getItem(OVERHEAD_ID).total_seconds, 2700); // the break went nowhere, not to TimeOverhead
+});
+
+test('clocking out on a break ends the break there', () => {
+  const [ring] = card.addItem({ name: 'Moonstone ring' });
+  card.clockIn(start);
+  card.pauseClock(after(1));
+  const record = card.clockOut({ [ring.id]: 100 }, after(2));
+  assert.deepEqual([record.seconds, record.break_seconds], [3600, 3600]);
+  assert.equal(record.breaks[0].end, record.clock_out);
+  assert.equal(card.currentSession(), null);
+
+  // a clock-out time set back to before a break began leaves that break out altogether
+  card.clockIn(start);
+  card.pauseClock(after(1.5));
+  card.resumeClock(after(1.75));
+  const early = card.clockOut({ [ring.id]: 100 }, after(1));
+  assert.deepEqual([early.seconds, early.break_seconds, early.breaks.length], [3600, 0, 0]);
+  assert.equal(card.getItem(ring.id).time_entries[1].break_seconds, undefined);
+  assert.throws(() => card.pauseClock(), TimeCardError); // not clocked in
+});

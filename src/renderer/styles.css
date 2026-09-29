@@ -67,6 +67,9 @@ label, .field-label { font-size: 13px; color: var(--muted); display: block; marg
 .clock .info { flex: 1 1 240px; }
 .clock .state { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
 .clock.on .state { color: var(--accent); }
+.clock.paused { border-color: var(--gold); box-shadow: inset 5px 0 0 var(--gold), var(--shadow); }
+.clock.paused .state { color: var(--gold); }
+.clock.paused .timer { color: var(--muted); }
 .clock .timer { font-size: 44px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .clock .since { font-size: 13px; color: var(--muted); }
 

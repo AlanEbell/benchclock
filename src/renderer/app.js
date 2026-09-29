@@ -100,9 +100,19 @@ function wireStepper(input, down, up, max = () => 999) {
 
 // ---- main page ---------------------------------------------------------
 
+const openBreak = (session) => (session && session.breaks || []).find((b) => !b.end);
+
+/** Seconds on breaks up to `end`. A break still running lasts until then. */
+function breakSeconds(session, end) {
+  return (session.breaks || []).reduce((sum, b) => (
+    sum + Math.max(Math.min(b.end ? new Date(b.end) : end, end) - new Date(b.start), 0) / 1000), 0);
+}
+/** Seconds worked up to `end`: the time since clocking in, less the breaks. */
+const workedSeconds = (session, end) => (end - new Date(session.clock_in)) / 1000 - breakSeconds(session, end);
+
 function tick() {
   if (!state.session) return;
-  $('timer').textContent = fmtClock((Date.now() + clockSkew - new Date(state.session.clock_in)) / 1000);
+  $('timer').textContent = fmtClock(workedSeconds(state.session, Date.now() + clockSkew));
 }
 setInterval(tick, 1000);
 
@@ -152,11 +162,18 @@ function groupHtml(group, list) {
 
 function render() {
   const session = state.session;
+  const paused = openBreak(session);
   $('clock').classList.toggle('on', !!session);
-  $('clockState').textContent = session ? 'Clocked in' : 'Clocked out';
+  $('clock').classList.toggle('paused', !!paused);
+  $('clockState').textContent = paused ? 'On a break' : session ? 'Clocked in' : 'Clocked out';
   $('clockBtn').textContent = session ? 'Clock out' : 'Clock in';
   $('cancelBtn').hidden = !session;
-  $('since').textContent = session ? `Since ${fmtWhen(session.clock_in)}` : 'Clock in when you sit down at the bench.';
+  $('pauseBtn').hidden = !session;
+  $('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
+  $('pauseBtn').classList.toggle('primary', !!paused);
+  $('clockBtn').classList.toggle('primary', !paused);
+  $('since').textContent = paused ? `Paused since ${fmtWhen(paused.start)}. Clocked in ${fmtWhen(session.clock_in)}.` :
+    session ? `Since ${fmtWhen(session.clock_in)}` : 'Clock in when you sit down at the bench.';
   if (session) tick(); else $('timer').textContent = '0:00:00';
 
   const open = state.items.filter((i) => i.status !== 'finished');
@@ -391,7 +408,8 @@ function openLog(item) {
   const rows = item.time_entries.map((e) => (e.kind === 'adjustment' ?
     `<tr class="adj"><td>${fmtDay(e.clock_in)}</td><td colspan="2">Adjustment${e.note ? `: ${esc(e.note)}` : ''}</td>
     <td>${e.seconds < 0 ? '\u2212' : '+'}${fmtDur(Math.abs(e.seconds))}</td></tr>` :
-    `<tr><td>${fmtWhen(e.clock_in)}</td><td>${fmtWhen(e.clock_out)}</td><td>${e.percent}%</td><td>${fmtDur(e.seconds)}</td></tr>`)).join('');
+    `<tr><td>${fmtWhen(e.clock_in)}</td><td>${fmtWhen(e.clock_out)}${e.break_seconds >= 30 ? `<div class="muted">less ${fmtDur(e.break_seconds)} of breaks</div>` : ''}</td>
+    <td>${e.percent}%</td><td>${fmtDur(e.seconds)}</td></tr>`)).join('');
   $('logBody').innerHTML = (rows ? `<table class="log"><tr><th>Clocked in</th><th>Clocked out</th><th>Share of session</th>
     <th>Time</th></tr>${rows}</table>` : '<p class="hint">No time logged yet.</p>') +
     `<div class="file">File: ${esc(state.dataDir)}/items/${esc(item.id)}.json</div>`;
@@ -615,6 +633,10 @@ $('clockBtn').onclick = async () => {
   if (state.session) openClockOut();
   else { await api('clockIn'); toast('Clocked in.'); }
 };
+$('pauseBtn').onclick = async () => {
+  if (openBreak(state.session)) { await api('resumeClock'); toast('Back at the bench. The clock is running.'); }
+  else { await api('pauseClock'); toast('Paused. Press Resume when you are back.'); }
+};
 $('cancelBtn').onclick = async () => {
   if (await ask('Discard this session?', 'No time will be logged for it.', 'Discard')) await api('cancelSession');
 };
@@ -624,6 +646,12 @@ let whenEdited = false;
 
 function sessionSeconds() {
   // Only trust the field once it has been changed: it only holds minutes.
+  const end = whenEdited && $('outWhen').value ? new Date($('outWhen').value) : new Date(Date.now() + clockSkew);
+  return workedSeconds(state.session, end);
+}
+
+/** How long the clock-out time is after clocking in, breaks and all. */
+function sessionSpan() {
   const end = whenEdited && $('outWhen').value ? new Date($('outWhen').value) : new Date(Date.now() + clockSkew);
   return (end - new Date(state.session.clock_in)) / 1000;
 }
@@ -685,8 +713,10 @@ const evenly = (inputs, total) => spread(inputs, total, inputs.map(() => 1));
 
 function updateTotals() {
   const secs = sessionSeconds();
-  const timeOk = secs > 0;
-  $('outSummary').textContent = timeOk ? `Clocked in ${fmtWhen(state.session.clock_in)} — ${fmtDur(secs)} this session.` :
+  const timeOk = sessionSpan() > 0;
+  const onBreak = timeOk ? sessionSpan() - secs : 0;
+  $('outSummary').textContent = timeOk ? `Clocked in ${fmtWhen(state.session.clock_in)} — ${fmtDur(secs)} this session` +
+    `${onBreak >= 30 ? `, with ${fmtDur(onBreak)} of breaks left out` : ''}.` :
     `Clock-out time has to be after you clocked in (${fmtWhen(state.session.clock_in)}).`;
   let sum = 0;
   let valid = true;
