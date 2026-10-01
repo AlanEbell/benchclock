@@ -194,6 +194,17 @@ app.on('browser-window-created', (event, win) => {
       fs.writeFileSync(path.join(dataDir, 'calculators.png'), (await calcWin.webContents.capturePage()).toPNG());
       assert.match(await inCalc("return $('ringOut').textContent"), /UK and AustraliaN½/);
       assert.equal(await inCalc("return $('ringChart').querySelectorAll('tr.now').length"), 1, 'the chart marks the size');
+      // a 6½ inch wrist, comfort fit, is a 7¼ to 7½ inch bracelet; changing the unit carries the measurement over
+      await inCalc("document.querySelector('nav [data-panel=bracelet]').click(); $('brUnit').value = 'in'; $('brWrist').value = '6 1/2'; $('brFit').value = 'comfort'; $('brHand').value = '8.25'; $('brSize').value = '7.25'; recalc();");
+      assert.match(await inCalc("return $('brOut').textContent"), /Make the bracelet7¼ to 7½ in 184 to 191 mm.*it is size7.*Inside diameter, at least2⅞ in 73 mm.*Size 7\.25 is for a wrist of6¾ in/);
+      assert.deepEqual(await inCalc("return [...$('braceletChart').querySelectorAll('tr.now')].map((r) => r.children[1].textContent)"), ['Medium']);
+      assert.equal(await inCalc("return $('handChart').querySelector('tr.now').textContent"), 'Medium8¼2⅝2⅞73', 'the hand chart gives the same bangle as the answer');
+      await new Promise((r) => setTimeout(r, 200));
+      fs.writeFileSync(path.join(dataDir, 'calculators-bracelet.png'), (await calcWin.webContents.capturePage()).toPNG());
+      await inCalc("$('brUnit').value = 'cm'; $('brUnit').dispatchEvent(new Event('change', { bubbles: true }));");
+      assert.equal(await inCalc("return $('brWrist').value"), '16.51');
+      assert.match(await inCalc("return $('brOut').textContent"), /Make the bracelet18\.4 to 19\.1 cm 7¼ to 7½ in/);
+      await inCalc("$('brUnit').value = 'in'; $('brUnit').dispatchEvent(new Event('change', { bubbles: true }));");
       await inCalc("document.querySelector('nav [data-panel=gauge]').click(); $('gGauge').value = '18'; recalc();");
       assert.match(await inCalc("return $('gOut').textContent"), /18 gauge is1\.024 mm/);
       assert.equal(await inCalc("return $('gaugeChart').querySelectorAll('tr[data-g]').length"), 37);

@@ -36,7 +36,8 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
   TimeOverhead, and for a range of days each piece's time to date alongside), or
   *Save as CSV* for a spreadsheet.
 - **Calculators** - a window of bench arithmetic (*Tools > Calculators*, Ctrl+K): ring blank
-  length with a size conversion chart, bangle and hoop cut length, bezel strip length, jump
+  length with a size conversion chart, bangle and hoop cut length, bracelet length from the
+  wrist and bangle size from the hand, bezel strip length, jump
   ring wire, metal weight and cost in twenty metals, raising or lowering the purity of metal
   you have (sterling to 980, coin silver to sterling, 14k to 18k), alloy recipes
   for coloured golds and silvers (from a weight to make, or from the one ingredient you have) and

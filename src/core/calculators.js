@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Bench arithmetic: ring blanks, bezels, jump rings, metal weights, alloys, gauges and units.
+ * Bench arithmetic: ring blanks, bracelet sizes, bezels, jump rings, metal weights, alloys, gauges and units.
  * Pure functions with no Node in them, so the calculators window loads this file as it is
  * and the tests run it in Node. Lengths are millimetres, weights grams, unless a name says otherwise.
  */
@@ -86,6 +86,88 @@ function blankLength({ diameter, thickness = 0, knuckle = false, allowance = SOL
   const inner = Number(diameter) + (knuckle ? KNUCKLE_ALLOWANCE : 0);
   const neutral = Math.PI * (inner + Number(thickness));
   return { inner: round(inner), neutral: round(neutral), cut: round(neutral + Number(allowance)) };
+}
+
+// ----- bracelets ----------------------------------------------------------
+// Bracelets are sold by their length in inches. The length is the wrist, measured just below the
+// wrist bone, plus ease for the fit. A numbered size is the wrist plus half an inch. A bangle has
+// to pass the closed hand instead, so its inside diameter is the hand's (around ÷ π) plus a
+// quarter inch at least. The figures here are inches, as the trade gives them; the functions
+// take and return millimetres like the rest.
+
+const BRACELET_FITS = [
+  { id: 'snug', name: 'Snug', from: 0.25, to: 0.5 },
+  { id: 'comfort', name: 'Comfort', from: 0.75, to: 1 },
+  { id: 'loose', name: 'Loose', from: 1.25, to: 1.25 },
+];
+const BRACELET_SIZE_EASE = 0.5;
+const BANGLE_EASE = 0.25;
+
+/** The usual finished lengths, in inches. Approximate: a guide for when the wrist can't be measured. */
+const BRACELET_LENGTHS = [
+  { group: 'Children', name: 'Newborn to 6 months', from: 4, to: 4 },
+  { group: 'Children', name: '6 to 12 months', from: 4.5, to: 4.5 },
+  { group: 'Children', name: '12 to 24 months', from: 5, to: 5 },
+  { group: 'Children', name: '2 to 5 years', from: 5.5, to: 5.5 },
+  { group: 'Children', name: '6 to 8 years', from: 6, to: 6 },
+  { group: 'Children', name: '9 to 13 years', from: 6.5, to: 6.5 },
+  { group: 'Women', name: 'Petite', from: 7, to: 7 },
+  { group: 'Women', name: 'Medium', from: 7.5, to: 8 },
+  { group: 'Women', name: 'Large', from: 8.5, to: 8.5 },
+  { group: 'Women', name: 'Plus size', from: 9, to: 9 },
+  { group: 'Women', name: 'Ankle bracelet', from: 9.5, to: 10, anklet: true },
+  { group: 'Men', name: 'Small', from: 8, to: 8 },
+  { group: 'Men', name: 'Medium', from: 8.5, to: 8.5 },
+  { group: 'Men', name: 'Large', from: 9, to: 9 },
+  { group: 'Men', name: 'Plus size', from: 9.5, to: 9.5 },
+];
+
+/**
+ * Closed hands, in inches around the widest part. Small, medium and large are sizes of hand, not of
+ * bangle: the bangle for each is bangleForHand's, a quarter inch more than the hand is across.
+ */
+const HAND_SIZES = [
+  { name: 'Small', around: 7.5 },
+  { name: 'Medium', around: 8.25 },
+  { name: 'Large', around: 8.625 },
+];
+
+/** Bracelet length for a wrist: the wrist plus the ease the fit calls for, and the numbered size it is sold as. */
+function braceletLength({ wrist, fit = 'comfort' }) {
+  const ease = BRACELET_FITS.find((f) => f.id === fit);
+  const W = Number(wrist);
+  if (!ease || !(W > 0)) return null;
+  return { from: round(W + ease.from * INCH), to: round(W + ease.to * INCH), size: round(W / INCH + BRACELET_SIZE_EASE) };
+}
+
+/** The wrist a numbered bracelet size is made for: size 7.25 is a 6¾ inch wrist. */
+const braceletSizeToWrist = (size) => round((Number(size) - BRACELET_SIZE_EASE) * INCH);
+
+/** A bangle for a closed hand measuring `around`: how far across the hand is, and the least inside diameter that passes it. */
+function bangleForHand(around) {
+  const A = Number(around);
+  if (!(A > 0)) return null;
+  const hand = diameterOf(A);
+  return { hand: round(hand), inside: round(hand + BANGLE_EASE * INCH) };
+}
+
+// Inches come off a ruler as fractions, and bracelets are measured in them.
+const EIGHTHS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
+
+/** A measurement as people write it off a ruler: 6.5, 6 1/2, 6-1/2 or 6½. NaN if it isn't one. */
+function parseFraction(text) {
+  const m = /^\s*(\d+\.?\d*|\.\d+)?\s*-?\s*(?:(\d+)\s*\/\s*(\d+)|([⅛¼⅜½⅝¾⅞]))?\s*$/.exec(String(text));
+  if (!m || (m[1] === undefined && m[2] === undefined && m[4] === undefined)) return NaN;
+  const part = m[2] !== undefined ? Number(m[2]) / Number(m[3]) : m[4] ? EIGHTHS.indexOf(m[4]) / 8 : 0;
+  return Number.isFinite(part) ? Number(m[1] || 0) + part : NaN;
+}
+
+/** Inches as a ruler reads, to the nearest eighth: 7.5 is 7½, 2.375 is 2⅜. */
+function inchFraction(inches) {
+  const eighths = Math.round(Number(inches) * 8);
+  const whole = Math.floor(eighths / 8);
+  const part = EIGHTHS[eighths % 8];
+  return `${whole || !part ? whole : ''}${part}`;
 }
 
 // ----- bezel strips -------------------------------------------------------
@@ -328,6 +410,7 @@ function convert(value, from, to, units) {
 const api = {
   INCH, TROY_OUNCE, PENNYWEIGHT, CARAT, SOLDER_ALLOWANCE, KNUCKLE_ALLOWANCE, METALS, LENGTH_UNITS, WEIGHT_UNITS, UK_LETTERS,
   round, ringDiameter, ringSizes, ringSizeChart, ukToIndex, indexToUk, blankLength, ellipsePerimeter, bezelStrip,
+  BRACELET_FITS, BRACELET_LENGTHS, HAND_SIZES, braceletLength, braceletSizeToWrist, bangleForHand, parseFraction, inchFraction,
   awgToMm, mmToAwg, gaugeChart, jumpRings, stockVolume, weightOf, metalWeight, metalById, sameIn, changePurity, PURITIES, GOLD_COLOURS, karatOf, convert,
   RECIPES, recipeById, alloyRecipe, recipeFromOne, mixLots,
 };

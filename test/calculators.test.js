@@ -31,6 +31,38 @@ test('a ring blank is measured along the middle of the metal, with room to file'
   assert.equal(c.blankLength({ diameter: 65, thickness: 2, allowance: 0 }).cut, c.blankLength({ diameter: 65, thickness: 2, allowance: 0 }).neutral);
 });
 
+test('a bracelet is the wrist plus ease for the fit, and a bangle has to pass the hand', () => {
+  const inch = 25.4;
+  // a 6½ inch wrist: snug 6¾ to 7, comfort 7¼ to 7½, loose 7¾; sold by number it is a 7
+  const fits = Object.fromEntries(['snug', 'comfort', 'loose'].map((fit) => [fit, c.braceletLength({ wrist: 6.5 * inch, fit })]));
+  assert.deepEqual([fits.snug.from, fits.snug.to], [171.45, 177.8]);
+  assert.deepEqual([fits.comfort.from, fits.comfort.to, fits.comfort.size], [184.15, 190.5, 7]);
+  assert.equal(fits.loose.from, fits.loose.to);
+  near(fits.loose.to / inch, 7.75, 0.001);
+  assert.equal(c.braceletLength({ wrist: 0 }), null);
+  assert.equal(c.braceletLength({ wrist: 165, fit: 'baggy' }), null);
+  // a size 6.75 bracelet is a 6¼ inch wrist; 7.25 is 6¾
+  assert.deepEqual([c.braceletSizeToWrist(6.75), c.braceletSizeToWrist(7.25)], [158.75, 171.45]);
+  // a hand 8¼ inches around is 2⅝ across, so the bangle is 2⅞ inside at least
+  const bangle = c.bangleForHand(8.25 * inch);
+  near(bangle.hand / inch, 2.625, 0.005);
+  near(bangle.inside / inch, 2.875, 0.005);
+  assert.equal(c.bangleForHand(''), null);
+  // small, medium and large hands are 2⅜, 2⅝ and 2¾ across, and their bangles 67, 73 and 76 mm inside: the figures the bangle panel and the help quote
+  const hands = c.HAND_SIZES.map((h) => c.bangleForHand(h.around * inch));
+  assert.deepEqual(hands.map((h) => c.inchFraction(h.hand / inch)), ['2⅜', '2⅝', '2¾']);
+  assert.deepEqual(hands.map((h) => c.inchFraction(h.inside / inch)), ['2⅝', '2⅞', '3']);
+  assert.deepEqual(hands.map((h) => Math.round(h.inside)), [67, 73, 76]);
+  assert.deepEqual(c.BRACELET_LENGTHS.filter((r) => r.group === 'Women').map((r) => r.from), [7, 7.5, 8.5, 9, 9.5]);
+  assert.equal(c.BRACELET_LENGTHS.length, 15);
+});
+
+test('inches as fractions, read and written', () => {
+  assert.deepEqual(['6.5', '6 1/2', '6-1/2', '6½', ' 6 ½ ', '1/4', '⅜', '7', '6.', '.5'].map(c.parseFraction), [6.5, 6.5, 6.5, 6.5, 6.5, 0.25, 0.375, 7, 6, 0.5]);
+  for (const text of ['', 'six', '6 1/0', '6 1/', '6"x']) assert.ok(Number.isNaN(c.parseFraction(text)), text);
+  assert.deepEqual([7.5, 2.375, 7, 0.25, 6.96, 0, 8.625].map(c.inchFraction), ['7½', '2⅜', '7', '¼', '7', '0', '8⅝']);
+});
+
 test('bezel strip by shape', () => {
   near(c.bezelStrip({ shape: 'round', length: 10, thickness: 0.3, overlap: 1 }).cut, Math.PI * 10 + Math.PI * 0.3 + 1);
   near(c.ellipsePerimeter(10, 10), Math.PI * 10, 0.001); // a circle is an ellipse

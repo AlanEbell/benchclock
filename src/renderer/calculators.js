@@ -81,6 +81,58 @@ function bangle() {
     line('Inside circumference', mm(Math.PI * d, 1)) + line('Outside diameter', mm(d + 2 * num('bangleT')));
 }
 
+const BRACELET_UNITS = { in: (v) => calc.inchFraction(v / calc.INCH), cm: (v) => (v / 10).toFixed(1), mm: (v) => String(Math.round(v)) };
+/** A length in mm, or a span of two, written in a unit: "7¼ to 7½". */
+function span(unit, from, to = from) {
+  const [a, b] = [BRACELET_UNITS[unit](from), BRACELET_UNITS[unit](to)];
+  return b === a ? a : `${a} to ${b}`;
+}
+function braceletLists() {
+  const inch = (r, unit) => span(unit, r.from * calc.INCH, r.to * calc.INCH);
+  $('brFit').innerHTML = calc.BRACELET_FITS.map((f) => `<option value="${f.id}">${f.name}: add ${inch(f, 'in')} in</option>`).join('');
+  $('brFit').value = 'comfort';
+  $('braceletChart').innerHTML = '<tr><th>For</th><th>Size</th><th>Length in</th><th>Length mm</th></tr>' + calc.BRACELET_LENGTHS.map((r, i) =>
+    `<tr data-i="${i}"><td>${r.group}</td><td>${r.name}</td><td>${inch(r, 'in')}</td><td>${inch(r, 'mm')}</td></tr>`).join('');
+  $('handChart').innerHTML = '<tr><th>Hand</th><th>Around in</th><th>Across in</th><th>Bangle inside, at least in</th><th>mm</th></tr>' + calc.HAND_SIZES.map((r, i) => {
+    const passes = calc.bangleForHand(r.around * calc.INCH);
+    return `<tr data-i="${i}"><td>${r.name}</td><td>${calc.inchFraction(r.around)}</td><td>${span('in', passes.hand)}</td><td>${span('in', passes.inside)}</td><td>${span('mm', passes.inside)}</td></tr>`;
+  }).join('');
+}
+let braceletUnit = 'in';
+/** Another unit chosen: the wrist and hand typed in the old one are carried over. */
+function useBraceletUnit(unit) {
+  for (const id of ['brWrist', 'brHand']) {
+    const typed = calc.parseFraction($(id).value);
+    if (!ok(typed)) continue;
+    $(id).value = Number(calc.convert(typed, braceletUnit, unit, calc.LENGTH_UNITS).toFixed(unit === 'mm' ? 0 : 2));
+    remember(id, $(id).value);
+  }
+  braceletUnit = unit;
+}
+function bracelet() {
+  const unit = $('brUnit').value;
+  const other = unit === 'in' ? 'mm' : 'in';
+  const len = (from, to) => `${span(unit, from, to)} ${unit} <span class="sub">${span(other, from, to)} ${other}</span>`;
+  const typed = (id) => calc.parseFraction($(id).value) * calc.LENGTH_UNITS[unit];
+  for (const id of ['brWrist', 'brHand']) $(id).placeholder = { in: 'e.g. 6.5 or 6 1/2', cm: 'e.g. 16.5', mm: 'e.g. 165' }[unit];
+  const wrist = typed('brWrist');
+  const made = calc.braceletLength({ wrist, fit: $('brFit').value });
+  let out = made ? line('Make the bracelet', len(made.from, made.to), 'big') + line('Around the wrist', len(wrist)) + line('Sold by number, it is size', String(made.size)) :
+    bad('Type the measurement around the wrist.');
+  for (const row of $('braceletChart').querySelectorAll('tr[data-i]')) {
+    const r = calc.BRACELET_LENGTHS[row.dataset.i];
+    row.classList.toggle('now', Boolean(made) && !r.anklet && r.from * calc.INCH <= made.to + 0.01 && r.to * calc.INCH >= made.from - 0.01);
+  }
+  const hand = typed('brHand');
+  const passes = calc.bangleForHand(hand);
+  out += head('A bangle to pass the hand') + (passes ? line('Inside diameter, at least', len(passes.inside), 'big') + line('The hand is across', len(passes.hand)) :
+    bad('Type the measurement around the closed hand.'));
+  const gaps = calc.HAND_SIZES.map((r) => Math.abs(r.around * calc.INCH - hand));
+  for (const row of $('handChart').querySelectorAll('tr[data-i]')) row.classList.toggle('now', Boolean(passes) && Number(row.dataset.i) === gaps.indexOf(Math.min(...gaps)));
+  out += head('A numbered size') + (num('brSize') > 0.5 ? line(`Size ${num('brSize')} is for a wrist of`, len(calc.braceletSizeToWrist(num('brSize'))), 'big') : bad('Type a bracelet size.'));
+  $('brOut').innerHTML = out;
+}
+
 function bezel() {
   const shape = $('bezelShape').value;
   showFieldsFor('bezel', shape);
@@ -291,10 +343,11 @@ function units() {
 
 // ---- wiring ---------------------------------------------------------------
 
-const ALL = [ringBlank, bangle, bezel, jump, weight, alloy, recipe, fromOne, gauge, units];
+const ALL = [ringBlank, bangle, bracelet, bezel, jump, weight, alloy, recipe, fromOne, gauge, units];
 function recalc() { for (const fn of ALL) fn(); }
 
 ringChart();
+braceletLists();
 gaugeChart();
 jumpGaugeList();
 metalLists();
@@ -303,6 +356,7 @@ fromOneList();
 purityLists();
 colourList();
 restore();
+braceletUnit = $('brUnit').value;
 if (remembered('rGold') === null) fillRecipe($('rRecipe').value);
 if (remembered('fGold') === null) fillFromOne($('fRecipe').value);
 if (remembered('cSilverPct') === null) fillColour($('cColour').value);
@@ -313,6 +367,7 @@ document.addEventListener('input', (ev) => {
 document.addEventListener('change', (ev) => {
   if (ev.target.id === 'jumpGauge' && ev.target.value !== '') { $('jumpWire').value = calc.awgToMm(Number(ev.target.value)).toFixed(3); remember('jumpWire', $('jumpWire').value); }
   if (ev.target.id === 'jumpWire') { $('jumpGauge').value = ''; remember('jumpGauge', ''); }
+  if (ev.target.id === 'brUnit') useBraceletUnit(ev.target.value);
   if (ev.target.id === 'rRecipe') fillRecipe(ev.target.value);
   if (ev.target.id === 'fRecipe') fillFromOne(ev.target.value);
   if (['fGold', 'fSilver', 'fCopper'].includes(ev.target.id)) { $('fRecipe').value = 'custom'; remember('fRecipe', 'custom'); }

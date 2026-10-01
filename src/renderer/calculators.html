@@ -13,6 +13,7 @@
   <h1>Calculators</h1>
   <button data-panel="ring" aria-pressed="true">Ring blank</button>
   <button data-panel="bangle">Bangle or hoop</button>
+  <button data-panel="bracelet">Bracelet size</button>
   <button data-panel="bezel">Bezel strip</button>
   <button data-panel="jump">Jump rings</button>
   <button data-panel="weight">Metal weight and cost</button>
@@ -56,11 +57,12 @@
   <section id="bangle" class="panel" hidden>
     <h2>Bangle or hoop cut length</h2>
     <p class="hint">The same arithmetic as a ring blank, for anything round made from stock: a bangle, a hoop earring, a large jump ring.
-      Bangles are usually 60 mm (small), 65 mm (medium) or 70 mm (large) inside.</p>
+      A bangle has to pass the closed hand with a quarter inch to spare: 67 mm inside at least for a small hand, 73 mm for a medium, 76 mm for a large.
+      <b>Bracelet size</b> works it out from a measurement around the hand.</p>
     <div class="grid">
       <div class="inputs">
         <label for="bangleD">Inside diameter <span class="muted">mm</span></label>
-        <input type="number" id="bangleD" value="65" min="0" step="0.5">
+        <input type="number" id="bangleD" value="73" min="0" step="0.5">
         <label for="bangleT">Stock thickness <span class="muted">mm, the wire or sheet</span></label>
         <input type="number" id="bangleT" value="2" min="0" step="0.05">
         <label for="bangleAllow">Allowance for filing and the joint <span class="muted">mm</span></label>
@@ -68,6 +70,38 @@
       </div>
       <div class="results" id="bangleOut"></div>
     </div>
+  </section>
+
+  <section id="bracelet" class="panel" hidden>
+    <h2>Bracelet size</h2>
+    <p class="hint">Measure the wrist just below the wrist bone, where the bracelet will sit, with a tape or a strip of paper marked and laid against a ruler.
+      The bracelet is that plus ease for the fit. A bangle has to pass the hand instead: bring the thumb and little finger together, as if putting one on,
+      and measure around the widest part with the tape pulled snug.</p>
+    <div class="grid">
+      <div class="inputs">
+        <label for="brUnit">Measured in</label>
+        <select id="brUnit"><option value="in">Inches</option><option value="cm">Centimetres</option><option value="mm">Millimetres</option></select>
+        <label for="brWrist">Around the wrist</label>
+        <input type="text" id="brWrist" value="6.5">
+        <label for="brFit">Fit</label>
+        <select id="brFit"></select>
+
+        <h3>A bangle to pass the hand</h3>
+        <label for="brHand">Around the closed hand <span class="muted">at its widest</span></label>
+        <input type="text" id="brHand" value="8.25">
+        <p class="muted">Type the inside diameter into <b>Bangle or hoop</b> for the length of stock to cut.</p>
+
+        <h3>A numbered size</h3>
+        <label for="brSize">Bracelet size <span class="muted">sold by number: the wrist in inches plus a half</span></label>
+        <input type="number" id="brSize" value="7.25" min="0" step="0.25">
+      </div>
+      <div class="results" id="brOut"></div>
+    </div>
+    <h3>Usual bracelet lengths</h3>
+    <table class="chart" id="braceletChart"></table>
+    <p class="muted">Approximate, for when the wrist can't be measured. Anklets usually have a 1 to 2 inch extension chain as well.</p>
+    <h3>Closed hands, and the bangle that passes them</h3>
+    <table class="chart" id="handChart"></table>
   </section>
 
   <section id="bezel" class="panel" hidden>
