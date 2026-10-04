@@ -27,8 +27,10 @@ current_session.json     exists only while clocked in: { id, clock_in, breaks }
 [BenchPrice](https://github.com/AlanEbell/benchprice) keeps its files in `pricing/` inside this
 folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchClock never reads or
 writes `pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
-BenchPrice changes one thing outside `pricing/`: a piece sent back to the bench there has its `status`
-and `finished_at` set as BenchClock's own Reopen would set them.
+BenchPrice changes two things outside `pricing/`. A piece sent back to the bench there has its `status`
+and `finished_at` set as BenchClock's own Reopen would set them. A piece added there (old stock, or
+work the clock was never started for) is written to `items/` as BenchClock would write it: already
+`finished`, its hours as one `adjustment` time entry, and with `"origin": "benchprice"`.
 
 All timestamps are ISO 8601 local time with UTC offset, to the second:
 `2026-09-17T14:05:00-04:00`. All durations are seconds.
@@ -52,6 +54,7 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 | `started_at` | timestamp or null | Clock-in time of the first session that gave it time. |
 | `finished_at` | timestamp or null | |
 | `split_from` | string or null | When part of a batch was finished early, the id of the batch it came from. |
+| `origin` | string | Only on a piece added outside BenchClock: `benchprice` for one added in BenchPrice. Missing on BenchClock's own. BenchClock keeps it and otherwise ignores it. |
 | `time_entries` | array | One entry per work session, below. |
 | `total_seconds` | number | Sum of `time_entries[].seconds`. |
 | `seconds_per_piece` | number | `total_seconds / quantity`. |
