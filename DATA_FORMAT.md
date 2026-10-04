@@ -27,6 +27,8 @@ current_session.json     exists only while clocked in: { id, clock_in, breaks }
 [BenchPrice](https://github.com/AlanEbell/benchprice) keeps its files in `pricing/` inside this
 folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchClock never reads or
 writes `pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
+[BenchCamera](https://github.com/AlanEbell/benchcamera) keeps its photos and settings in `camera/` inside this
+folder in the same way, documented in that project; it writes nowhere else.
 BenchPrice changes two things outside `pricing/`. A piece sent back to the bench there has its `status`
 and `finished_at` set as BenchClock's own Reopen would set them. A piece added there (old stock, or
 work the clock was never started for) is written to `items/` as BenchClock would write it: already
