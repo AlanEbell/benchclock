@@ -125,8 +125,12 @@ function breakSeconds(breaks, start, end) {
 /**
  * Give every item a display `label`. Pieces added together as one batch get
  * "(1 of 3)" style labels so they can be told apart in the queue and at clock-out.
+ * `groups` is how BenchPrice has divided sets (see TimeCard.priceGroups): a piece of a
+ * divided set also says its group, "(1 of 4, A: Aquamarine)", and carries `group` and `group_name`.
  */
-function labelItems(items) {
+function labelItems(items, groups = {}) {
+  const sets = groups.sets || {};
+  const names = groups.names || {};
   const byBatch = new Map();
   for (const item of items) {
     const key = item.batch_id || item.id;
@@ -135,7 +139,13 @@ function labelItems(items) {
   for (const group of byBatch.values()) {
     group.sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
     group.forEach((item, index) => {
-      item.label = group.length === 1 ? item.name : `${item.name} (${index + 1} of ${group.length})`;
+      // the same rule as BenchPrice: a piece added to a divided set since goes in its first group
+      const letters = item.batch_id && item.type !== 'custom' ? sets[item.batch_id] : null;
+      const letter = letters ? letters[item.id] || Object.values(letters).sort()[0] || null : null;
+      const described = (letter && (names[item.batch_id] || {})[letter]) || '';
+      const tags = [group.length > 1 && `${index + 1} of ${group.length}`, letter && (described ? `${letter}: ${described}` : `group ${letter}`)].filter(Boolean);
+      item.label = tags.length ? `${item.name} (${tags.join(', ')})` : item.name;
+      if (letter) { item.group = letter; item.group_name = described; }
     });
   }
   return items;
@@ -242,6 +252,20 @@ class TimeCard {
       });
     }
     return this.getItem(OVERHEAD_ID);
+  }
+
+  /**
+   * How BenchPrice has divided sets into groups priced apart, for labelItems: each piece's
+   * letter and what each group is called. Read from BenchPrice's pricing/splits.json, the one
+   * file of its that BenchClock looks at; never written. Empty without BenchPrice.
+   */
+  priceGroups() {
+    try {
+      const splits = readJson(path.join(this.dataDir, 'pricing', 'splits.json'));
+      return { sets: splits.sets || {}, names: splits.names || {} };
+    } catch {
+      return { sets: {}, names: {} };
+    }
   }
 
   /** Every piece and batch. TimeOverhead isn't a piece; see overheadItem(). */

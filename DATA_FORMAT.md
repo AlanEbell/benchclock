@@ -25,8 +25,10 @@ current_session.json     exists only while clocked in: { id, clock_in, breaks }
 ```
 
 [BenchPrice](https://github.com/AlanEbell/benchprice) keeps its files in `pricing/` inside this
-folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchClock never reads or
-writes `pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
+folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchClock never writes
+`pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
+BenchClock reads one file there, `pricing/splits.json`, to show which group of a divided set a piece is in
+and what the group is called (*Spiral earrings (1 of 4, A: Aquamarine)*).
 [BenchCamera](https://github.com/AlanEbell/benchcamera) keeps its photos and settings in `camera/` inside this
 folder in the same way, documented in that project; it writes nowhere else.
 BenchPrice changes two things outside `pricing/`. A piece sent back to the bench there has its `status`

@@ -22,7 +22,7 @@ let calcWindow;
 protocol.registerSchemesAsPrivileged([{ scheme: 'bench-photo', privileges: { secure: true } }]);
 
 function buildState() {
-  const items = labelItems(card.listItems());
+  const items = labelItems(card.listItems(), card.priceGroups());
   return {
     now: toIso(new Date()),
     session: card.currentSession(),
@@ -67,7 +67,7 @@ function choose({ scope = 'all', ids = [], from, to } = {}) {
     all: () => true, ticked: (i) => ids.includes(i.id), bench: (i) => i.status !== FINISHED, finished: (i) => i.status === FINISHED,
   }[scope];
   // labelled first, so "(2 of 3)" still means what it does on screen
-  return { scope, period, items: labelItems(card.listItems()).filter(wanted), overhead: scope === 'all' ? card.overheadItem() : null };
+  return { scope, period, items: labelItems(card.listItems(), card.priceGroups()).filter(wanted), overhead: scope === 'all' ? card.overheadItem() : null };
 }
 
 /** For the names of saved files: "finished from 2026-09-07 to 2026-09-13", or today's date when there is nothing to say. */

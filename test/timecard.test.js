@@ -36,6 +36,21 @@ test('batch versus separate pieces', () => {
   assert.equal(new Set(singles.map((s) => s.batch_id)).size, 1);
 });
 
+test('a piece of a set divided in BenchPrice says its group', () => {
+  const [a, b, c] = card.addItem({ name: 'Spiral earrings', quantity: 3, separate: true, type: 'earrings' });
+  const [single] = card.addItem({ name: 'Moonstone ring', type: 'ring' });
+  assert.deepEqual(card.priceGroups(), { sets: {}, names: {} }); // no BenchPrice
+  fs.mkdirSync(path.join(dir, 'pricing'));
+  fs.writeFileSync(path.join(dir, 'pricing', 'splits.json'), JSON.stringify({ sets: { [a.batch_id]: { [a.id]: 'A', [b.id]: 'B' } }, names: { [a.batch_id]: { A: 'Aquamarine' } } }));
+  const items = Object.fromEntries(labelItems(card.listItems(), card.priceGroups()).map((i) => [i.id, i]));
+  assert.deepEqual([a, b, c, single].map((i) => items[i.id].label), [
+    'Spiral earrings (1 of 3, A: Aquamarine)', 'Spiral earrings (2 of 3, group B)', 'Spiral earrings (3 of 3, A: Aquamarine)', 'Moonstone ring']);
+  assert.deepEqual([items[a.id].group, items[a.id].group_name, items[b.id].group_name, items[single.id].group], ['A', 'Aquamarine', '', undefined]);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'items', `${a.id}.json`), 'utf8')).label, undefined); // shown, not saved
+  fs.writeFileSync(path.join(dir, 'pricing', 'splits.json'), 'not json');
+  assert.deepEqual(card.priceGroups(), { sets: {}, names: {} });
+});
+
 test('pieces added later are a different batch, even with the same name', () => {
   const first = card.addItem({ name: 'Moonstone ring', quantity: 3, separate: true });
   const later = card.addItem({ name: 'Moonstone ring', quantity: 2, separate: true });
