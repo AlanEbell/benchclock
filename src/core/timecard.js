@@ -8,6 +8,7 @@
  *   <data dir>/
  *     items/<item-id>.json      one file per piece (or batch of pieces)
  *     items/time-overhead.json  the catch-all for time not spent making
+ *     items/time-distracted.json  time pulled away from the bench: neither making nor overhead
  *     sessions/<session>.json   one file per completed clock-in/clock-out
  *     photos/<hash>.jpg         the photo library: pictures that can stand in for a piece's icon
  *     current_session.json      present only while clocked in; holds the breaks taken so far
@@ -25,9 +26,20 @@ const NOT_STARTED = 'not_started';
 const IN_PROGRESS = 'in_progress';
 const FINISHED = 'finished';
 const OVERHEAD = 'overhead';
+const DISTRACTED = 'distracted';
 
 const OVERHEAD_ID = 'time-overhead';
 const OVERHEAD_NAME = 'TimeOverhead';
+const DISTRACTED_ID = 'time-distracted';
+const DISTRACTED_NAME = 'TimeDistracted';
+
+// The two lines that are always there and are not pieces. TimeOverhead gets whatever part of a
+// session is not given out. TimeDistracted is given a share at clock-out like a piece, for time
+// away from the work altogether, so that it doesn't count as overhead when pieces are priced.
+const ASIDE = {
+  [OVERHEAD_ID]: { name: OVERHEAD_NAME, type: OVERHEAD, notes: 'Time clocked in but not spent on a piece.' },
+  [DISTRACTED_ID]: { name: DISTRACTED_NAME, type: DISTRACTED, notes: 'Time clocked in but pulled away from the bench: neither making nor the work around it.' },
+};
 
 // A time entry made by hand rather than by clocking out (see adjustTime).
 const ADJUSTMENT = 'adjustment';
@@ -210,6 +222,7 @@ class TimeCard {
     fs.mkdirSync(this.sessionsDir, { recursive: true });
     fs.mkdirSync(this.photosDir, { recursive: true });
     this.overheadItem();
+    this.distractedItem();
   }
 
   // ----- items ---------------------------------------------------------
@@ -235,23 +248,34 @@ class TimeCard {
   }
 
   getPiece(itemId) {
-    if (itemId === OVERHEAD_ID) {
-      throw new TimeCardError(`${OVERHEAD_NAME} is always there - it can't be finished, renamed or deleted.`);
+    if (Object.hasOwn(ASIDE, itemId)) {
+      throw new TimeCardError(`${ASIDE[itemId].name} is always there - it can't be finished, renamed or deleted.`);
     }
     return this.getItem(itemId);
   }
 
-  /** The catch-all for time not spent making. Created the first time it is needed. */
-  overheadItem() {
-    if (!fs.existsSync(this.itemPath(OVERHEAD_ID))) {
+  /** One of the lines that is always there (ASIDE). Created the first time it is needed. */
+  asideItem(itemId) {
+    if (!fs.existsSync(this.itemPath(itemId))) {
+      const { name, type, notes } = ASIDE[itemId];
       this.saveItem({
-        schema_version: SCHEMA_VERSION, id: OVERHEAD_ID, sequence: 0, name: OVERHEAD_NAME, sku: '',
-        type: OVERHEAD, photo: null, batch_id: null, quantity: 1, status: OVERHEAD, notes: 'Time clocked in but not spent on a piece.',
+        schema_version: SCHEMA_VERSION, id: itemId, sequence: 0, name, sku: '',
+        type, photo: null, batch_id: null, quantity: 1, status: type, notes,
         created_at: toIso(new Date()), started_at: null, finished_at: null, split_from: null,
         time_entries: [],
       });
     }
-    return this.getItem(OVERHEAD_ID);
+    return this.getItem(itemId);
+  }
+
+  /** The catch-all for time not spent making. */
+  overheadItem() {
+    return this.asideItem(OVERHEAD_ID);
+  }
+
+  /** Time pulled away from the bench: given a share at clock-out, so it isn't counted as overhead. */
+  distractedItem() {
+    return this.asideItem(DISTRACTED_ID);
   }
 
   /**
@@ -268,10 +292,10 @@ class TimeCard {
     }
   }
 
-  /** Every piece and batch. TimeOverhead isn't a piece; see overheadItem(). */
+  /** Every piece and batch. TimeOverhead and TimeDistracted aren't pieces; see asideItem(). */
   listItems() {
     const items = fs.readdirSync(this.itemsDir)
-      .filter((name) => name.endsWith('.json') && name !== `${OVERHEAD_ID}.json`)
+      .filter((name) => name.endsWith('.json') && !Object.hasOwn(ASIDE, name.slice(0, -5)))
       .map((name) => this.getItem(name.slice(0, -5)));
     const rank = (item) => (item.status === FINISHED ? 1 : 0);
     items.sort((a, b) => rank(a) - rank(b) ||
@@ -478,9 +502,9 @@ class TimeCard {
 
   /**
    * Close the session, splitting its length across pieces. `allocations` maps
-   * item id -> percent of the session. Whatever is left over, up to the full
-   * 100%, goes to TimeOverhead. Breaks are left out of the length; a break still
-   * running ends with the session.
+   * item id -> percent of the session; TimeDistracted may be given a share like a
+   * piece. Whatever is left over, up to the full 100%, goes to TimeOverhead. Breaks
+   * are left out of the length; a break still running ends with the session.
    */
   clockOut(allocations = {}, when) {
     const session = this.currentSession();
@@ -541,7 +565,7 @@ class TimeCard {
    * clock-in that was forgotten, a share that came out wrong at clock-out. `minutes` may be
    * negative. Each piece in `ids` gets the whole amount, or with `split` they share it evenly.
    * `when` is the day the work belongs to, which is the day reports count it on. `note` says why.
-   * TimeOverhead can be adjusted too. Returns the seconds given to each piece.
+   * TimeOverhead and TimeDistracted can be adjusted too. Returns the seconds given to each piece.
    */
   adjustTime({ ids, minutes, split = false, when, note = '' } = {}) {
     if (!Array.isArray(ids) || !ids.length) throw new TimeCardError('Choose at least one piece.');
@@ -572,9 +596,9 @@ class TimeCard {
 
   // ----- export --------------------------------------------------------
 
-  /** Write `items` as CSV; by default every piece followed by TimeOverhead. Returns the row count. */
+  /** Write `items` as CSV; by default every piece, then TimeOverhead and TimeDistracted. Returns the row count. */
   exportCsv(file, items) {
-    items = items || [...this.listItems(), this.overheadItem()];
+    items = items || [...this.listItems(), this.overheadItem(), this.distractedItem()];
     const rows = items.map((item) => [
       item.id, item.name, item.sku, item.type, item.photo || '', item.batch_id || '', item.quantity, item.status, item.created_at,
       item.started_at || '', item.finished_at || '', round2(item.total_seconds / 3600),
@@ -590,6 +614,6 @@ class TimeCard {
 module.exports = {
   TimeCard, TimeCardError, labelItems, formatDuration, toIso, defaultDataDir, breakSeconds,
   checkPeriod, inPeriod, narrowItem, narrowItems, sessionIds, sessionCount,
-  NOT_STARTED, IN_PROGRESS, FINISHED, OVERHEAD, OVERHEAD_ID, OVERHEAD_NAME, ADJUSTMENT,
+  NOT_STARTED, IN_PROGRESS, FINISHED, OVERHEAD, OVERHEAD_ID, OVERHEAD_NAME, DISTRACTED, DISTRACTED_ID, DISTRACTED_NAME, ADJUSTMENT,
   PIECE_TYPES, DEFAULT_TYPE, CSV_FIELDS, SCHEMA_VERSION,
 };

@@ -6,7 +6,7 @@ const path = require('node:path');
 const { test, beforeEach, afterEach } = require('node:test');
 
 const {
-  TimeCard, TimeCardError, labelItems, FINISHED, IN_PROGRESS, NOT_STARTED, OVERHEAD_ID,
+  TimeCard, TimeCardError, labelItems, FINISHED, IN_PROGRESS, NOT_STARTED, OVERHEAD_ID, DISTRACTED_ID,
 } = require('../src/core/timecard.js');
 
 const HOUR = 3600 * 1000;
@@ -29,7 +29,7 @@ test('batch versus separate pieces', () => {
   assert.equal(batch.quantity, 6);
   assert.deepEqual(singles.map((s) => s.quantity), [1, 1, 1]);
   assert.equal(new Set(singles.map((s) => s.id)).size, 3);
-  assert.equal(itemFiles().length, 5); // 4 + TimeOverhead
+  assert.equal(itemFiles().length, 6); // 4 + TimeOverhead + TimeDistracted
   assert.deepEqual(labelItems(card.listItems()).map((i) => i.label), [
     'Hoop earrings', 'Moonstone ring (1 of 3)', 'Moonstone ring (2 of 3)', 'Moonstone ring (3 of 3)']);
   assert.equal(batch.batch_id, null);
@@ -94,15 +94,41 @@ test('clock out splits time by percent', () => {
   assert.equal(fs.readdirSync(path.join(dir, 'sessions')).length, 1);
 });
 
-test('TimeOverhead exists from the start and is not a piece', () => {
+test('TimeOverhead and TimeDistracted exist from the start and are not pieces', () => {
   const overhead = card.overheadItem();
-  assert.deepEqual([overhead.name, overhead.total_seconds], ['TimeOverhead', 0]);
+  const distracted = card.distractedItem();
+  assert.deepEqual([overhead.name, overhead.total_seconds, overhead.status], ['TimeOverhead', 0, 'overhead']);
+  assert.deepEqual([distracted.name, distracted.total_seconds, distracted.status, distracted.type], ['TimeDistracted', 0, 'distracted', 'distracted']);
   assert.ok(itemFiles().includes('time-overhead.json'));
+  assert.ok(itemFiles().includes('time-distracted.json'));
   assert.deepEqual(card.listItems(), []);
   for (const change of [(i) => card.deleteItem(i), (i) => card.reopenItem(i), (i) => card.finishItems([i]),
     (i) => card.updateItem(i, { name: 'x' }), (i) => card.finishPartOfBatch(i, 1)]) {
     assert.throws(() => change(OVERHEAD_ID), TimeCardError);
+    assert.throws(() => change(DISTRACTED_ID), TimeCardError);
   }
+  // a data folder from before TimeDistracted existed gets the file when it is next opened
+  fs.rmSync(path.join(dir, 'items', 'time-distracted.json'));
+  assert.equal(new TimeCard(dir).distractedItem().total_seconds, 0);
+  assert.ok(itemFiles().includes('time-distracted.json'));
+});
+
+test('a share given to TimeDistracted stays out of TimeOverhead', () => {
+  const [ring] = card.addItem({ name: 'Ring' });
+  card.clockIn(start);
+  const record = card.clockOut({ [ring.id]: 70, [DISTRACTED_ID]: 10 }, after(2));
+  assert.equal(card.getItem(ring.id).total_seconds, 5040);
+  assert.equal(card.distractedItem().total_seconds, 720);
+  assert.equal(card.overheadItem().total_seconds, 1440);
+  assert.deepEqual(record.allocations.map((a) => [a.name, a.percent]), [['Ring', 70], ['TimeDistracted', 10], ['TimeOverhead', 20]]);
+  assert.equal(card.listItems().length, 1, 'TimeDistracted is not listed as a piece');
+  card.clockIn(after(2));
+  assert.throws(() => card.clockOut({ [ring.id]: 95, [DISTRACTED_ID]: 10 }, after(3)), /more than the whole session/);
+  card.clockOut({ [DISTRACTED_ID]: 100 }, after(3)); // a whole session lost
+  assert.equal(card.distractedItem().total_seconds, 4320);
+  assert.equal(card.overheadItem().time_entries.length, 1);
+  card.adjustTime({ ids: [DISTRACTED_ID], minutes: -12 });
+  assert.equal(card.distractedItem().total_seconds, 3600);
 });
 
 test('unassigned percent goes to TimeOverhead', () => {
@@ -262,12 +288,13 @@ test('CSV export', () => {
   card.clockIn(start);
   card.clockOut({ [hoops.id]: 100 }, after(1.5));
   const out = path.join(dir, 'out.csv');
-  assert.equal(card.exportCsv(out), 2);
-  const [header, row, overhead] = fs.readFileSync(out, 'utf8').trim().split('\r\n');
+  assert.equal(card.exportCsv(out), 3);
+  const [header, row, overhead, distracted] = fs.readFileSync(out, 'utf8').trim().split('\r\n');
   assert.ok(header.startsWith('item_id,name,sku,type,photo,batch_id,quantity,status'));
   assert.ok(row.includes('"Hoops, ""large""",H-1,earrings,,,2,in_progress'));
   assert.ok(row.includes(',1.5,90,45,1,'));
   assert.ok(overhead.startsWith('time-overhead,TimeOverhead,,overhead,,,1,overhead'));
+  assert.ok(distracted.startsWith('time-distracted,TimeDistracted,,distracted,,,1,distracted'));
 });
 
 test('timestamps carry the local UTC offset', () => {

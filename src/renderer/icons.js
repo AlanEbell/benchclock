@@ -42,6 +42,10 @@ const ICONS = {
   overhead:
     '<circle cx="12" cy="12" r="8.5"/>' +
     '<path d="M12 7v5l3.2 2"/>',
+  distracted: // a clock face with a question mark: time that went who knows where
+    '<circle cx="12" cy="12" r="8.5"/>' +
+    '<path d="M9.6 9.8a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.2 1-1.2 1.9"/>' +
+    '<path d="M12 16.6v.2"/>',
   // interface glyphs
   plus: '<path d="M12 5v14M5 12h14"/>',
   chevron: '<path d="m9 5 7 7-7 7"/>',

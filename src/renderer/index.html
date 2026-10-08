@@ -99,7 +99,13 @@
   <input type="datetime-local" id="outWhen">
   <p class="hint gap" id="outHint"></p>
   <div id="allocRows"></div>
-  <div class="alloc overhead-row">
+  <div class="alloc aside-row">
+    <span class="tile small" id="outDistractedTile"></span>
+    <div><b>TimeDistracted</b><div class="muted">pulled away from the bench - neither making nor overhead; leave blank if not</div></div>
+    <div class="pct"><input type="number" min="0" max="100" step="any" id="outDistracted" aria-label="Percent for TimeDistracted"></div>
+    <div class="mins" id="distractedMins"></div>
+  </div>
+  <div class="alloc">
     <span class="tile small" id="outOverheadTile"></span>
     <div><b>TimeOverhead</b><div class="muted">everything besides making - gets whatever is left</div></div>
     <div class="pct-fixed" id="overheadPct"></div>

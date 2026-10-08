@@ -186,7 +186,7 @@ dialog p { margin: 6px 0; }
 .alloc .pct::after { content: "%"; position: absolute; right: 10px; top: 8px; color: var(--muted); }
 .alloc .pct-fixed { text-align: right; font-weight: 600; padding-right: 10px; font-variant-numeric: tabular-nums; }
 .alloc .mins { color: var(--muted); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
-.alloc.overhead-row { border-top: 2px solid var(--line); margin-top: 4px; padding-top: 12px; }
+.alloc.aside-row { border-top: 2px solid var(--line); margin-top: 4px; padding-top: 12px; }
 .alloc .group-art { grid-column: 1; }
 .total { text-align: right; font-weight: 600; padding-top: 10px; color: var(--accent); }
 .total.bad { color: var(--warn); }

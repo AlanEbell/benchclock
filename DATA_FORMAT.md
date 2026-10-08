@@ -19,6 +19,7 @@ Override with the `BENCHCLOCK_DATA_DIR` environment variable or `--data-dir=<fol
 ```
 items/<id>.json          one file per piece, or per batch made together
 items/time-overhead.json TimeOverhead: clocked time that was not given to a piece
+items/time-distracted.json TimeDistracted: clocked time pulled away from the bench, given a share at clock-out
 sessions/<stamp>-<id>.json   one file per completed clock-in / clock-out
 photos/<hash>.jpg        photo library; 512 px square JPEGs
 current_session.json     exists only while clocked in: { id, clock_in, breaks }
@@ -48,11 +49,11 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 | `sequence` | int | Running number; keeps same-named pieces in the order they were added. |
 | `name` | string | Piece or design name. Several items may share a name. |
 | `sku` | string | Optional, may be empty. |
-| `type` | string | `earrings`, `ring`, `pendant`, `chain`, `bracelet`, `cuff`, `brooch`, `custom`, `other`; `overhead` for TimeOverhead. Missing in files from before types existed: treat as `other`. |
+| `type` | string | `earrings`, `ring`, `pendant`, `chain`, `bracelet`, `cuff`, `brooch`, `custom`, `other`; `overhead` for TimeOverhead, `distracted` for TimeDistracted. Missing in files from before types existed: treat as `other`. |
 | `photo` | string or null | File name inside `photos/`, shown instead of the type's icon. May be missing: treat as null. |
 | `batch_id` | string or null | Shared by pieces added together ("3 moonstone rings"); the app shows them as one group. The same design added again later gets a new `batch_id`. Null for a piece added on its own. May be missing: treat as null. |
 | `quantity` | int | Normally 1: several of one design are separate items sharing a `batch_id`. More than 1 means a single entry standing for a whole batch (older files; still read). |
-| `status` | string | `not_started`, `in_progress`, `finished`; `overhead` for TimeOverhead. |
+| `status` | string | `not_started`, `in_progress`, `finished`; `overhead` for TimeOverhead, `distracted` for TimeDistracted. |
 | `notes` | string | Free text, may be empty. |
 | `created_at` | timestamp | |
 | `started_at` | timestamp or null | Clock-in time of the first session that gave it time. |
@@ -62,6 +63,13 @@ All timestamps are ISO 8601 local time with UTC offset, to the second:
 | `time_entries` | array | One entry per work session, below. |
 | `total_seconds` | number | Sum of `time_entries[].seconds`. |
 | `seconds_per_piece` | number | `total_seconds / quantity`. |
+
+`time-overhead` and `time-distracted` are the only two items that are not pieces. Both are always
+present (from BenchClock 1.6.0 on for `time-distracted`; treat a missing file as an item with no time).
+TimeOverhead gets whatever part of a session was not given out. TimeDistracted is time away from the
+work altogether, given a share at clock-out like a piece; it is neither making nor overhead, so a
+program measuring the overhead share of clocked time should leave it out of both sides.
+A reader that wants only pieces should skip items by `status` (`overhead`, `distracted`), not by file name.
 
 Each `time_entries[]` entry: `session_id`, `clock_in`, `clock_out`, `percent` (share of
 that session, 0-100), `seconds` (session length x percent).
@@ -87,7 +95,8 @@ in proportion to their quantities.
 
 `id`, `clock_in`, `clock_out`, `seconds`, and `allocations`: an array of
 `{ item_id, name, quantity, percent }`. Percentages always total 100; the part not
-given to a piece appears as the `time-overhead` entry.
+given to a piece appears as the `time-overhead` entry, and a share given to TimeDistracted
+as a `time-distracted` entry (absent when none was).
 
 `seconds` is the time worked: `clock_out` minus `clock_in`, less the breaks. `breaks` is an array of
 `{ start, end }` timestamps, one for each time the clock was paused, and `break_seconds` is their
@@ -102,7 +111,8 @@ One row per item, `\r\n` line endings, RFC 4180 quoting. Columns:
 `item_id, name, sku, type, photo, batch_id, quantity, status, created_at, started_at, finished_at,
 total_hours, total_minutes, minutes_per_piece, work_sessions, notes`
 
-An export of everything ends with the TimeOverhead row (`status` = `overhead`).
+An export of everything ends with the TimeOverhead row (`status` = `overhead`) and then the
+TimeDistracted row (`status` = `distracted`).
 An export made for a range of days counts only the time clocked in on those days in `total_hours`,
 `total_minutes`, `minutes_per_piece` and `work_sessions`, and leaves out pieces that have none and
 were not finished in the range (unless they were ticked for the export). The dates are in the file's name.

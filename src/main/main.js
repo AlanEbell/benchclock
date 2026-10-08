@@ -5,7 +5,7 @@ const os = require('node:os');
 const { app, BrowserWindow, Menu, dialog, ipcMain, nativeImage, protocol, shell } = require('electron');
 
 const {
-  TimeCard, TimeCardError, labelItems, toIso, checkPeriod, narrowItem, narrowItems, sessionIds, FINISHED, OVERHEAD, PIECE_TYPES,
+  TimeCard, TimeCardError, labelItems, toIso, checkPeriod, narrowItem, narrowItems, sessionIds, FINISHED, OVERHEAD, DISTRACTED, PIECE_TYPES,
 } = require('../core/timecard.js');
 const { buildReportHtml, periodLabel } = require('./report.js');
 const { version, homepage } = require('../../package.json');
@@ -28,6 +28,7 @@ function buildState() {
     session: card.currentSession(),
     items,
     overhead: card.overheadItem(),
+    distracted: card.distractedItem(),
     clockOutIds: card.clockOutCandidates().map((item) => item.id),
     photos: card.listPhotos(),
     types: PIECE_TYPES,
@@ -57,7 +58,7 @@ const SCOPES = { all: 'Every piece', ticked: 'Ticked pieces', bench: 'Pieces on 
 
 /**
  * Work out what a report or export covers. `scope` picks the pieces (`ids` are the ticked ones) and
- * `from`/`to` the days. TimeOverhead only comes along when every piece does.
+ * `from`/`to` the days. TimeOverhead and TimeDistracted only come along when every piece does.
  */
 function choose({ scope = 'all', ids = [], from, to } = {}) {
   if (!Object.hasOwn(SCOPES, scope)) throw new TimeCardError(`Unknown choice of pieces: ${scope}`);
@@ -67,7 +68,11 @@ function choose({ scope = 'all', ids = [], from, to } = {}) {
     all: () => true, ticked: (i) => ids.includes(i.id), bench: (i) => i.status !== FINISHED, finished: (i) => i.status === FINISHED,
   }[scope];
   // labelled first, so "(2 of 3)" still means what it does on screen
-  return { scope, period, items: labelItems(card.listItems(), card.priceGroups()).filter(wanted), overhead: scope === 'all' ? card.overheadItem() : null };
+  const all = scope === 'all';
+  return {
+    scope, period, items: labelItems(card.listItems(), card.priceGroups()).filter(wanted),
+    overhead: all ? card.overheadItem() : null, distracted: all ? card.distractedItem() : null,
+  };
 }
 
 /** For the names of saved files: "finished from 2026-09-07 to 2026-09-13", or today's date when there is nothing to say. */
@@ -78,10 +83,10 @@ function fileWords({ scope, period }) {
 
 /** Lay the report out in a hidden window and print that to a PDF file. `choice` is what choose() takes; leave it out for everything. */
 async function writeReportPdf(file, choice = {}) {
-  const { scope, period, items, overhead } = choose(choice);
+  const { scope, period, items, overhead, distracted } = choose(choice);
   const pieces = scope === 'all' ? '' : SCOPES[scope];
   const html = buildReportHtml({
-    items, overhead, types: PIECE_TYPES, photosDir: card.photosDir, period, pieces, handPicked: scope === 'ticked',
+    items, overhead, distracted, types: PIECE_TYPES, photosDir: card.photosDir, period, pieces, handPicked: scope === 'ticked',
   });
   const covers = [pieces, periodLabel(period)].filter(Boolean).join(' \u00b7 ');
   const page = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'benchclock-report-')), 'report.html');
@@ -104,10 +109,11 @@ async function writeReportPdf(file, choice = {}) {
   }
 }
 
-/** The chosen pieces with only the chosen days' time on them, TimeOverhead last: the rows of a CSV. */
-function exportRows({ scope, period, items, overhead }) {
+/** The chosen pieces with only the chosen days' time on them, then TimeOverhead and TimeDistracted: the rows of a CSV. */
+function exportRows({ scope, period, items, overhead, distracted }) {
   const ranged = period.from || period.to;
-  return [...narrowItems(items, period, scope === 'ticked'), ...(overhead ? [ranged ? narrowItem(overhead, period) : overhead] : [])];
+  const aside = [overhead, distracted].filter(Boolean).map((item) => (ranged ? narrowItem(item, period) : item));
+  return [...narrowItems(items, period, scope === 'ticked'), ...aside];
 }
 
 const api = {
@@ -138,11 +144,13 @@ const api = {
   /** What the choices in the report box come to, before anything is saved. */
   exportPreview(choice) {
     const rows = exportRows(choose(choice));
-    const pieces = rows.filter((i) => i.status !== OVERHEAD);
+    const seconds = (list) => list.reduce((n, i) => n + i.total_seconds, 0);
+    const pieces = rows.filter((i) => i.status !== OVERHEAD && i.status !== DISTRACTED);
     return {
       pieces: pieces.reduce((n, i) => n + i.quantity, 0),
-      making: pieces.reduce((n, i) => n + i.total_seconds, 0),
-      overhead: rows.filter((i) => i.status === OVERHEAD).reduce((n, i) => n + i.total_seconds, 0),
+      making: seconds(pieces),
+      overhead: seconds(rows.filter((i) => i.status === OVERHEAD)),
+      distracted: seconds(rows.filter((i) => i.status === DISTRACTED)),
       sessions: sessionIds(rows).size,
     };
   },

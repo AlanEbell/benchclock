@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-let state = { items: [], overhead: null, session: null, clockOutIds: [], photos: [], types: [] };
+let state = { items: [], overhead: null, distracted: null, session: null, clockOutIds: [], photos: [], types: [] };
 let clockSkew = 0; // main process clock minus page clock, ms
 const selected = new Set();
 const expanded = new Set(); // groups that are open, as '<list>:<name>'
@@ -47,7 +47,8 @@ const localInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.g
 const pieces = (n) => `${n} piece${n === 1 ? '' : 's'}`;
 const round2 = (n) => Math.round(n * 100) / 100;
 const photoUrl = (name) => `bench-photo://library/${encodeURIComponent(name)}`;
-const findItem = (id) => (id === state.overhead.id ? state.overhead : state.items.find((i) => i.id === id));
+const asideItems = () => [state.overhead, state.distracted]; // the lines below the bench that are not pieces
+const findItem = (id) => asideItems().find((i) => i && i.id === id) || state.items.find((i) => i.id === id);
 
 /** Pieces added together are shown as one group; anything else stands alone. Keeps the order of first appearance. */
 const groupKey = (item) => item.batch_id || item.id;
@@ -196,13 +197,14 @@ function render() {
   $('benchTip').hidden = !open.length;
   $('selCount').textContent = selected.size ? `${selected.size} ticked` : '';
 
-  const overhead = state.overhead;
-  $('overhead').innerHTML = `<div class="row" data-id="${esc(overhead.id)}">
-    <span class="tile grey">${iconSvg('overhead')}</span>
-    <div class="name"><b>${esc(overhead.name)}</b>
-      <div class="meta">Everything besides making. Gets whatever part of a session you don't give to a piece.</div></div>
-    <div class="time">${fmtDur(overhead.total_seconds)}</div>
+  const asideRow = (item, meta) => `<div class="row" data-id="${esc(item.id)}">
+    <span class="tile grey">${iconSvg(item.type)}</span>
+    <div class="name"><b>${esc(item.name)}</b><div class="meta">${meta}</div></div>
+    <div class="time">${fmtDur(item.total_seconds)}</div>
     <div class="acts"><button class="quiet" data-act="log">Log</button></div></div>`;
+  $('overhead').innerHTML =
+    asideRow(state.overhead, "Everything besides making. Gets whatever part of a session you don't give to a piece.") +
+    asideRow(state.distracted, 'Pulled away from the bench: neither making nor the work around it. Give it a share at clock-out so it stays out of overhead.');
 
   $('finCount').textContent = done.length ? pieces(done.reduce((n, i) => n + i.quantity, 0)) : '';
   $('finished').hidden = !showFinished || !done.length;
@@ -431,9 +433,9 @@ function openAdjust(ids) {
   $('adjustRows').innerHTML = [
     bench.length && `<div class="group-title">On the bench</div>${bench.map((i) => line(i)).join('')}`,
     done.length && `<div class="group-title">Finished</div>${done.map((i) => line(i, 'finished')).join('')}`,
-    `<div class="group-title">Everything else</div>${line(state.overhead)}`,
+    `<div class="group-title">Everything else</div>${asideItems().map((i) => line(i, 'aside')).join('')}`,
   ].filter(Boolean).join('');
-  $('adjustRows').querySelector('.choice:last-child .tile').classList.add('grey');
+  for (const tile of $('adjustRows').querySelectorAll('.choice.aside .tile')) tile.classList.add('grey');
   $('adjHours').value = 0;
   $('adjMins').value = 30;
   $('adjNote').value = '';
@@ -560,9 +562,10 @@ async function updateReport() {
   let empty = false;
   if (!backwards) {
     const found = await api('exportPreview', reportChoice());
-    empty = !found.pieces && !found.overhead;
+    empty = !found.pieces && !found.overhead && !found.distracted;
+    const aside = [found.overhead && `${fmtDur(found.overhead)} of TimeOverhead`, found.distracted && `${fmtDur(found.distracted)} of TimeDistracted`].filter(Boolean);
     text = empty ? `${days}: nothing to report. Pieces are left out when they have no time on these days and weren't finished on them.` :
-      `${days}: ${pieces(found.pieces)}, ${fmtDur(found.making)} on them${found.overhead ? ` and ${fmtDur(found.overhead)} of TimeOverhead` : ''},
+      `${days}: ${pieces(found.pieces)}, ${fmtDur(found.making)} on them${aside.length ? ` and ${aside.join(' and ')}` : ''},
        in ${found.sessions} session${found.sessions === 1 ? '' : 's'}. Time counts on the day its session was clocked in.`;
   }
   $('reportSummary').textContent = text.replace(/\s+/g, ' ');
@@ -662,11 +665,15 @@ async function openClockOut() {
   candidates = state.items.filter((i) => state.clockOutIds.includes(i.id));
   whenEdited = false;
   $('outWhen').value = localInput(new Date(Date.now() + clockSkew));
-  $('outOverheadTile').innerHTML = iconSvg('overhead');
-  $('outOverheadTile').className = 'tile small grey';
-  $('outHint').textContent = candidates.length ?
+  for (const [tile, icon] of [['outOverheadTile', 'overhead'], ['outDistractedTile', 'distracted']]) {
+    $(tile).innerHTML = iconSvg(icon);
+    $(tile).className = 'tile small grey';
+  }
+  $('outDistracted').value = '';
+  $('outHint').textContent = (candidates.length ?
     "What share of this session went to each piece? Leave blank for pieces you didn't touch. Whatever you don't assign goes to TimeOverhead." :
-    'No pieces on the bench, so this whole session goes to TimeOverhead.';
+    'No pieces on the bench, so this session goes to TimeOverhead.') +
+    ' Time you were pulled away from the bench altogether can go to TimeDistracted instead.';
 
   // Pieces that share a name are one closed line: one number, divided evenly. Opened, each has its own box.
   let html = '';
@@ -698,6 +705,11 @@ async function openClockOut() {
 }
 
 const itemInputs = () => [...document.querySelectorAll('#allocRows input[data-item]')];
+/** The share typed for TimeDistracted: 0 when blank, NaN or negative when it can't be used. */
+function distractedShare() {
+  const input = $('outDistracted');
+  return input.value === '' ? 0 : !input.validity.valid ? NaN : Number(input.value);
+}
 
 /** Give `total` percent to `inputs` by weight; the last one absorbs the rounding so the sum is exact. */
 function spread(inputs, total, weights) {
@@ -735,14 +747,19 @@ function updateTotals() {
       share > 0 && timeOk ? fmtDur(secs * share / 100) : '';
   }
   sum = round2(sum);
-  const fits = valid && sum <= 100.01;
-  const left = fits ? round2(Math.max(100 - sum, 0)) : 0;
+  const distracted = distractedShare();
+  if (!Number.isFinite(distracted) || distracted < 0) valid = false;
+  const given = round2(sum + (valid ? distracted : 0));
+  const fits = valid && given <= 100.01;
+  const left = fits ? round2(Math.max(100 - given, 0)) : 0;
+  $('distractedMins').textContent = valid && distracted > 0 && timeOk ? fmtDur(secs * distracted / 100) : '';
   $('overheadPct').textContent = fits ? `${left}%` : '';
   $('overheadMins').textContent = fits && timeOk && left ? fmtDur(secs * left / 100) : '';
   $('allocTotal').className = `total ${fits ? '' : 'bad'}`;
+  const parts = [`Pieces ${sum}%`, distracted > 0 && `TimeDistracted ${round2(distracted)}%`].filter(Boolean);
   $('allocTotal').textContent = !valid ? 'Percentages need to be numbers from 0 to 100.' :
-    !fits ? `Pieces add up to ${sum}% — ${round2(sum - 100)}% too much` :
-      `Pieces ${sum}%  +  TimeOverhead ${left}%  =  100%`;
+    !fits ? `${parts.join(' and ')} add up to ${given}% — ${round2(given - 100)}% too much` :
+      `${parts.join('  +  ')}  +  TimeOverhead ${left}%  =  100%`;
   $('outConfirm').disabled = !fits || !timeOk;
 }
 
@@ -770,16 +787,19 @@ $('allocRows').addEventListener('keydown', (ev) => {
   if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('.toggle')) { ev.preventDefault(); ev.target.click(); }
 });
 $('outWhen').oninput = () => { whenEdited = true; updateTotals(); };
+$('outDistracted').oninput = updateTotals;
+/** What the pieces have between them once TimeDistracted has had its share. */
+const forPieces = () => round2(100 - Math.max(0, Math.min(100, distractedShare() || 0)));
 $('evenBtn').onclick = () => {
   // Weighted by quantity, so a batch of 6 gets six shares.
   const inputs = itemInputs();
-  spread(inputs, 100, inputs.map((i) => findItem(i.dataset.item).quantity));
+  spread(inputs, forPieces(), inputs.map((i) => findItem(i.dataset.item).quantity));
   updateTotals();
 };
 $('fillBtn').onclick = () => {
   const inputs = itemInputs();
   const blank = inputs.filter((i) => i.value === '');
-  const left = round2(100 - inputs.reduce((n, i) => n + (Number(i.value) || 0), 0));
+  const left = round2(forPieces() - inputs.reduce((n, i) => n + (Number(i.value) || 0), 0));
   if (!blank.length) toast('Every row already has a number.');
   else if (left <= 0) toast("There's nothing left to spread.");
   else { evenly(blank, left); updateTotals(); }
@@ -788,11 +808,13 @@ $('outCancel').onclick = () => $('outDlg').close();
 $('outConfirm').onclick = async () => {
   const allocations = {};
   for (const input of itemInputs()) if (Number(input.value) > 0) allocations[input.dataset.item] = Number(input.value);
+  if (distractedShare() > 0) allocations[state.distracted.id] = distractedShare();
   const record = await api('clockOut', { allocations, when: whenEdited ? $('outWhen').value : null });
   $('outDlg').close();
-  const overhead = record.allocations.filter((a) => a.item_id === state.overhead.id).reduce((n, a) => n + a.percent, 0);
-  toast(`Clocked out. ${fmtDur(record.seconds)} logged` +
-    (overhead ? `, ${fmtDur(record.seconds * overhead / 100)} of it to TimeOverhead.` : '.'));
+  const share = (item) => record.allocations.filter((a) => a.item_id === item.id).reduce((n, a) => n + a.percent, 0);
+  const went = asideItems().map((item) => [share(item), item.name]).filter(([pct]) => pct)
+    .map(([pct, name]) => `${fmtDur(record.seconds * pct / 100)} to ${name}`);
+  toast(`Clocked out. ${fmtDur(record.seconds)} logged${went.length ? `, ${went.join(' and ')}.` : '.'}`);
 };
 // Keeps the session length current while the dialog sits open.
 setInterval(() => { if ($('outDlg').open) updateTotals(); }, 5000);

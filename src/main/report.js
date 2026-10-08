@@ -41,15 +41,17 @@ const STATUS = { not_started: 'Getting started', in_progress: 'In progress', fin
  * `photosDir` is where item.photo file names live. `period` narrows the report to some days.
  *
  * A report on some of the pieces, not all, is given no `overhead`: how clocked time divides
- * between making and TimeOverhead can't be told from part of the bench. `pieces` says which
- * they are ("Ticked pieces"), and `handPicked` keeps every one of them, time in the period or not.
+ * between making and TimeOverhead can't be told from part of the bench. `distracted` (TimeDistracted)
+ * comes with `overhead` in the same way. `pieces` says which they are ("Ticked pieces"), and
+ * `handPicked` keeps every one of them, time in the period or not.
  */
-function buildReportHtml({ items, overhead = null, types, photosDir, period, pieces = '', handPicked = false, generatedAt = new Date() }) {
+function buildReportHtml({ items, overhead = null, distracted = null, types, photosDir, period, pieces = '', handPicked = false, generatedAt = new Date() }) {
   period = checkPeriod(period);
   const ranged = !!(period.from || period.to);
   const partial = !overhead;
   items = narrowItems(items, period, handPicked);
   if (ranged && overhead) overhead = narrowItem(overhead, period);
+  if (ranged && distracted) distracted = narrowItem(distracted, period);
   const typeLabel = (id) => (types.find((t) => t.id === id) || { label: 'Other' }).label;
   const picture = (item) => (item.photo ?
     `<span class="tile"><img src="${esc(pathToFileURL(path.join(photosDir, item.photo)).href)}" alt=""></span>` :
@@ -92,7 +94,7 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
   const count = (list) => list.reduce((n, i) => n + i.quantity, 0);
   const sum = (list) => list.reduce((n, i) => n + i.total_seconds, 0);
   const making = sum(items);
-  const all = making + (overhead ? overhead.total_seconds : 0);
+  const all = making + (overhead ? overhead.total_seconds : 0) + (distracted ? distracted.total_seconds : 0);
   const sessionTotal = sessionIds(items).size;
   const covers = [pieces, periodLabel(period)].filter(Boolean).join(' \u00b7 ');
   const share = (secs) => (all ? `${Math.round(secs / all * 100)}%` : '');
@@ -134,6 +136,7 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
     .overhead { display: flex; align-items: center; gap: 10pt; border: 1px solid #e4dccd; border-radius: 6pt; padding: 8pt 10pt; break-inside: avoid; }
     .overhead .tile { background: #efe8da; color: #776d62; flex: none; }
     .overhead .grow { flex: 1; }
+    .overhead + .overhead { margin-top: 6pt; }
   </style></head><body>
   <h1>BenchClock time report</h1>
   ${covers ? `<div class="period">${esc(covers)}</div>` : ''}
@@ -144,7 +147,8 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
       stat('Sessions', sessionTotal, ranged ? 'in this period' : '') : `
     ${stat(ranged ? 'Time clocked' : 'All time clocked', duration(all), `${hours(all)} hours`)}
     ${stat('Making', duration(making), share(making) && `${share(making)} of clocked time`)}
-    ${stat('TimeOverhead', duration(overhead.total_seconds), share(overhead.total_seconds) && `${share(overhead.total_seconds)} of clocked time`)}`}
+    ${stat('TimeOverhead', duration(overhead.total_seconds), share(overhead.total_seconds) && `${share(overhead.total_seconds)} of clocked time`)}
+    ${distracted ? stat('TimeDistracted', duration(distracted.total_seconds), share(distracted.total_seconds) && `${share(distracted.total_seconds)} of clocked time`) : ''}`}
     ${partial ? stat('Pieces', count(items), [count(open) && `${count(open)} ${ranged ? 'worked on' : 'on the bench'}`,
       count(done) && `${count(done)} finished`].filter(Boolean).join(', ')) :
       stat('Pieces', `${count(open)} + ${count(done)}`, ranged ? 'worked on + finished' : 'on the bench + finished')}
@@ -159,9 +163,11 @@ function buildReportHtml({ items, overhead = null, types, photosDir, period, pie
   ${table(done, true)}`}
 
   ${partial ? '' : `<h2>Not making</h2>
-  <div class="overhead"><span class="tile">${iconSvg('overhead')}</span>
-    <div class="grow"><b>${esc(overhead.name)}</b><div class="sub">Clocked time that wasn't given to a piece &middot; ${plural(sessionCount(overhead), 'session')}</div></div>
-    <div class="num"><b>${duration(overhead.total_seconds)}</b><div class="sub">${hours(overhead.total_seconds)} hours</div></div></div>`}
+  ${[[overhead, 'overhead', "Clocked time that wasn't given to a piece"],
+    [distracted, 'distracted', 'Clocked time pulled away from the bench: neither making nor the work around it']]
+    .filter(([item]) => item).map(([item, icon, what]) => `<div class="overhead"><span class="tile">${iconSvg(icon)}</span>
+    <div class="grow"><b>${esc(item.name)}</b><div class="sub">${what} &middot; ${plural(sessionCount(item), 'session')}</div></div>
+    <div class="num"><b>${duration(item.total_seconds)}</b><div class="sub">${hours(item.total_seconds)} hours</div></div></div>`).join('')}`}
   </body></html>`;
 }
 

@@ -69,6 +69,13 @@ app.on('browser-window-created', (event, win) => {
       await run(`const g = document.querySelector('input[data-group]'); g.value = 50; g.dispatchEvent(new Event('input', { bubbles: true }));
                  $('outWhen').value = localInput(new Date(Date.now() + 2 * 3600e3)); $('outWhen').oninput();`);
       assert.match(await run("return $('allocTotal').textContent"), /Pieces 50%\s+\+\s+TimeOverhead 50%/);
+      // a share for TimeDistracted comes out of TimeOverhead's, and can't push the total past 100
+      await run("$('outDistracted').value = 10; $('outDistracted').oninput();");
+      assert.match(await run("return $('allocTotal').textContent"), /Pieces 50%\s+\+\s+TimeDistracted 10%\s+\+\s+TimeOverhead 40%/);
+      await run("$('outDistracted').value = 60; $('outDistracted').oninput();");
+      assert.deepEqual(await run("return [$('outConfirm').disabled, $('allocTotal').textContent.includes('too much')]"), [true, true]);
+      await run("$('outDistracted').value = ''; $('outDistracted').oninput();");
+      assert.match(await run("return $('allocTotal').textContent"), /Pieces 50%\s+\+\s+TimeOverhead 50%/);
       // opened, one piece can be changed on its own and the group's box follows
       await run(`document.querySelector('#allocRows [data-toggle]').click();
                  const one = itemInputs()[1]; one.value = 35; one.dispatchEvent(new Event('input', { bubbles: true }));`);

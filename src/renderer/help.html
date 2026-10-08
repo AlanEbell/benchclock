@@ -24,6 +24,7 @@
     <a href="#clock">Clocking in and out</a>
     <a href="#dividing">Dividing a session between pieces</a>
     <a href="#overhead">TimeOverhead</a>
+    <a href="#distracted">TimeDistracted</a>
     <a href="#pieces">Adding and editing pieces</a>
     <a href="#several">Making several of one design</a>
     <a href="#photos">Photos</a>
@@ -100,13 +101,15 @@
       <li>Type a number next to the pieces you worked on. <b>Leave the others blank.</b></li>
       <li>The numbers don't have to reach 100. Whatever you don't hand out goes to <a href="#overhead">TimeOverhead</a>, and the line
         at the bottom shows the sum: <i>Pieces 80% + TimeOverhead 20% = 100%</i>.</li>
+      <li>Below the pieces is a box for <a href="#distracted">TimeDistracted</a>: time you were pulled away from the bench altogether.
+        Leave it blank unless you were.</li>
       <li>They can't go over 100. If they do, the line turns red, tells you by how much, and <b class="ui">Clock out</b> waits until it is fixed.</li>
       <li>Decimals are fine: 12.5 is accepted.</li>
     </ul>
     <h3>Two buttons that do the arithmetic</h3>
     <ul>
-      <li><b class="ui">Split evenly</b> shares the whole 100% across every piece listed. An old-style entry that stands for six
-        pieces gets six shares.</li>
+      <li><b class="ui">Split evenly</b> shares the whole 100% across every piece listed, less anything typed for TimeDistracted. An old-style
+        entry that stands for six pieces gets six shares.</li>
       <li><b class="ui">Spread the rest</b> leaves the numbers you typed alone and shares what is left among the boxes that are
         still blank. Type the ones you are sure of, then press it.</li>
     </ul>
@@ -127,6 +130,23 @@
     <p>It matters for pricing. The report shows what share of your clocked time is making and what share is TimeOverhead,
       which tells you how much the unpaid hours add to the true cost of a piece. <a href="#benchprice">BenchPrice</a> uses that
       share to load your hourly rate.</p>
+  </section>
+
+  <section id="distracted">
+    <h2>TimeDistracted</h2>
+    <p>TimeDistracted is the other line that is always there, under TimeOverhead. It is for time you were clocked in but pulled
+      away from the bench altogether: a long phone call about something else, a visitor, an hour lost to the internet. That is
+      neither making nor the work around making, so it shouldn't be counted as overhead and loaded onto your prices.</p>
+    <p>Unlike TimeOverhead, you give it a share yourself. The clock-out box has a box for it below the pieces. Type a percentage
+      there when some of the session went nowhere; leave it blank when it didn't. The line at the bottom then reads
+      <i>Pieces 70% + TimeDistracted 10% + TimeOverhead 20% = 100%</i>. It can't be finished, renamed or deleted, and its
+      <b class="ui">Log</b> button shows every session that gave it time.</p>
+    <p>The report shows it as its own line and its own share of clocked time, next to making and TimeOverhead.
+      <a href="#benchprice">BenchPrice</a> leaves it out when it measures the TimeOverhead share, as if those minutes had never
+      been clocked. If you'd rather not keep track of it, leave the box blank and nothing changes: the time goes to TimeOverhead
+      as before.</p>
+    <div class="note">Which line? Ask whether the time was <i>for the studio</i>. Ordering, photographing, sweeping up and chasing an invoice
+      are TimeOverhead: the work had to be done. Twenty minutes on the phone with a friend is TimeDistracted.</div>
   </section>
 
   <section id="pieces">
@@ -216,8 +236,8 @@
     <p>Open it from <b class="ui">Edit &rsaquo; Adjust time&hellip;</b> (<kbd>Ctrl</kbd> + <kbd>T</kbd>), which starts with whatever is ticked on the lists;
       or from <b class="ui">Adjust time&hellip;</b> in a piece's <b class="ui">Log</b> or <b class="ui">Edit</b> box, which starts with that piece. The box asks:</p>
     <ul>
-      <li><b>Which pieces?</b> Tick any number, on the bench or finished. TimeOverhead is at the bottom of the list, for the day of
-        ordering and packing you never clocked.</li>
+      <li><b>Which pieces?</b> Tick any number, on the bench or finished. TimeOverhead and TimeDistracted are at the bottom of the list,
+        for the day of ordering and packing you never clocked, or a session where you forgot to say you were pulled away.</li>
       <li><b>How much?</b> <b class="ui">Add</b> or <b class="ui">Take off</b>, then hours and minutes. With more than one piece ticked, choose whether
         the amount goes <b class="ui">to each piece</b> or is <b class="ui">shared between them</b> evenly.</li>
       <li><b>Day the work was done.</b> Reports count the time on this day, so a week's report comes out right even when you catch up
@@ -242,7 +262,7 @@
     <h3>1. Which pieces?</h3>
     <table>
       <tr><th>Choice</th><th>What you get</th></tr>
-      <tr><td><b class="ui">Everything</b></td><td>Every piece, and TimeOverhead. The only choice that can show how your clocked time
+      <tr><td><b class="ui">Everything</b></td><td>Every piece, and TimeOverhead and TimeDistracted. The only choice that can show how your clocked time
         divides between making and everything else.</td></tr>
       <tr><td><b class="ui">Ticked</b></td><td>Only the pieces you ticked on the lists before opening the box: one customer's commission,
         one collection, the pieces for a show. If anything is ticked when you open the box, this is chosen for you.</td></tr>
@@ -269,7 +289,8 @@
         number of sessions and time. Groups are totalled with each piece listed beneath. For a range of days there is a
         <b>To date</b> column as well: the time in those days, and beside it everything the piece has taken so far.</li>
       <li><b class="ui">Save as CSV</b> makes a file for a spreadsheet, one row per piece, with hours, minutes, minutes per piece and the
-        number of sessions. For a range of days those figures count those days only. With <b class="ui">Everything</b> the last row is TimeOverhead.</li>
+        number of sessions. For a range of days those figures count those days only. With <b class="ui">Everything</b> the last two rows are
+        TimeOverhead and TimeDistracted.</li>
     </ul>
     <div class="example"><b>Some reports worth making.</b> Last week, everything: did the hours go where you meant them to?
       Last month, finished: what left the bench, and how long each piece really took (the <b>To date</b> column).
@@ -431,7 +452,8 @@
   <section id="benchprice">
     <h2>BenchPrice: putting a price on the pieces</h2>
     <p>BenchClock keeps time; it doesn't do prices. <b>BenchPrice</b> is a separate, free app from the same place that does. Install it
-      alongside BenchClock and it reads your time card: every finished piece with its making time, and the TimeOverhead share.
+      alongside BenchClock and it reads your time card: every finished piece with its making time, and the TimeOverhead share
+      (with TimeDistracted left out of it).
       For each piece you enter the metal and its weight in grams, and the stones, findings and anything else bought in at what you
       paid. It works out a price three ways (cost-plus, an hourly rate loaded with your TimeOverhead, and materials marked up by
       cost band), lets you set a price of your own instead, and writes the price you confirm into the piece's file.</p>

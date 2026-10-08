@@ -21,6 +21,9 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
   forgot to clock out.
 - **TimeOverhead** - always there. Whatever part of a session you don't give to a
   piece goes to it: ordering, photographing, cleaning up, anything besides making.
+- **TimeDistracted** - also always there, for time you were pulled away from the bench
+  altogether. Give it a share at clock-out and it stays out of TimeOverhead, so a lost
+  afternoon doesn't end up loaded onto your prices.
 - **Adjust time** - for work that was never clocked, or a share that came out wrong: *Edit >
   Adjust time* (Ctrl+T) works on the ticked pieces; *Adjust time...* is also in a piece's *Log*
   and *Edit* boxes. Add or take off hours and minutes, to each piece or shared between them,
@@ -32,8 +35,8 @@ session went to each piece on the bench. A desktop app for Linux, Windows and ma
   ticked, those on the bench, or those finished. *Which days*: this or last week, this or
   last month, this year, all time, or any From and To dates from a date picker; only time
   clocked on those days is counted. Then *Save as PDF* for a report to read and print
-  (batches totalled with each piece listed beneath, the split between making and
-  TimeOverhead, and for a range of days each piece's time to date alongside), or
+  (batches totalled with each piece listed beneath, the split between making,
+  TimeOverhead and TimeDistracted, and for a range of days each piece's time to date alongside), or
   *Save as CSV* for a spreadsheet.
 - **Calculators** - a window of bench arithmetic (*Tools > Calculators*, Ctrl+K): ring blank
   length with a size conversion chart, bangle and hoop cut length, bracelet length from the
@@ -51,7 +54,7 @@ All data is plain files on your own computer; see [DATA_FORMAT.md](DATA_FORMAT.m
 
 [BenchPrice](https://github.com/AlanEbell/benchprice) is a separate app that works alongside
 BenchClock. BenchClock knows how long each piece took and what share of your clocked time is
-TimeOverhead; BenchPrice adds the metal by weight at today's spot price, the stones and findings
+TimeOverhead (TimeDistracted left out); BenchPrice adds the metal by weight at today's spot price, the stones and findings
 at what you paid, and works out a price three ways for each finished piece. It reads BenchClock's
 data folder and keeps its own files in a `pricing` folder inside it, so one backup covers both.
 The only change it makes to BenchClock's own files is sending a piece that was finished by mistake

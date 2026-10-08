@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
 
-const { TimeCard, labelItems, PIECE_TYPES } = require('../src/core/timecard.js');
+const { TimeCard, labelItems, PIECE_TYPES, DISTRACTED_ID } = require('../src/core/timecard.js');
 const { buildReportHtml } = require('../src/main/report.js');
 
 test('the report lists current and past pieces with their time', () => {
@@ -29,6 +29,19 @@ test('the report lists current and past pieces with their time', () => {
     assert.match(text, /All time clocked 2h 00m/);
     assert.match(text, /Making 1h 30m.*75% of clocked time/);
     assert.match(text, /TimeOverhead 0h 30m.*25% of clocked time/);
+    assert.ok(!text.includes('TimeDistracted'), 'not given, not shown');
+
+    // with TimeDistracted along, it has its own share and its own line under Not making
+    card.clockIn(new Date(start.getTime() + 2 * 3600e3));
+    card.clockOut({ [rings[0].id]: 50, [DISTRACTED_ID]: 25 }, new Date(start.getTime() + 4 * 3600e3));
+    const both = buildReportHtml({
+      items: labelItems(card.listItems()), overhead: card.overheadItem(), distracted: card.distractedItem(), types: PIECE_TYPES, photosDir: card.photosDir,
+    }).replace(/<style>[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ').replace(/&middot;/g, '\u00b7').replace(/\s+/g, ' ');
+    assert.match(both, /All time clocked 4h 00m/);
+    assert.match(both, /Making 2h 30m.*6[23]% of clocked time/); // 62.5%, less the test's fraction of a second
+    assert.match(both, /TimeOverhead 1h 00m.*25% of clocked time/);
+    assert.match(both, /TimeDistracted 0h 30m.*13% of clocked time/);
+    assert.match(both, /Not making TimeOverhead .*2 sessions.*1h 00m.*TimeDistracted .*1 session.*0h 30m/);
     assert.match(text, /On the bench 3 pieces · 1h 00m/);
     assert.match(text, /Moonstone ring ×2/);           // the batch is one line ...
     assert.match(text, /Moonstone ring \(1 of 2\) In progress/); // ... with each ring beneath it
