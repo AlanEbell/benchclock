@@ -52,7 +52,7 @@
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
   },
   "devDependencies": {
-    "electron": "^44.4.1",
+    "electron": "^44.11.3",
     "electron-builder": "^26.15.3"
   },
   "homepage": "https://github.com/AlanEbell/benchclock",

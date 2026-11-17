@@ -30,7 +30,7 @@ folder (`pricing/settings.json`, `pricing/items/<id or batch_id>.json`). BenchCl
 `pricing/`; it is BenchPrice's, documented in that project. Other programs should leave it alone too.
 BenchClock reads one file there, `pricing/splits.json`, to show which group of a divided set a piece is in
 and what the group is called (*Spiral earrings (1 of 4, A: Aquamarine)*).
-[BenchCamera](https://github.com/AlanEbell/benchcamera) keeps its photos and settings in `camera/` inside this
+BenchCamera keeps its photos and settings in `camera/` inside this
 folder in the same way, documented in that project; it writes nowhere else.
 BenchPrice changes two things outside `pricing/`. A piece sent back to the bench there has its `status`
 and `finished_at` set as BenchClock's own Reopen would set them. A piece added there (old stock, or
